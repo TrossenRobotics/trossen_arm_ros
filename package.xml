@@ -1,0 +1,19 @@
+<package format="2">
+  <name>trossen_arm_description</name>
+  <version>1.0.0</version>
+  <description>URDF Description package for Trossen Arms</description>
+
+  <author email="luke@trossenrobotics.com">Luke Schmitt</author>
+  <license>Proprietary</license>
+  <maintainer email="luke@trossenrobotics.com">Luke Schmitt</maintainer>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>robot_state_publisher</depend>
+  <depend>joint_state_publisher_gui</depend>
+  <depend>rviz2</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
