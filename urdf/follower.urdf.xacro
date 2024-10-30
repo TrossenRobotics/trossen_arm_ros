@@ -1,0 +1,394 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com)
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot name="follower">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.00067083589343116 -1.23352385933331E-05 0.0413995334110192"
+        rpy="-1.57079632679 0 0" />
+      <mass
+        value="0.965102338827487" />
+      <inertia
+        ixx="0.00104727746382921"
+        ixy="-9.63146274264131E-08"
+        ixz="-1.40095083789266E-08"
+        iyy="0.0010135042172377"
+        iyz="9.28656768557766E-09"
+        izz="0.00193063324275295" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="-1.57079632679 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="-1.57079632679 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="link_1">
+    <inertial>
+      <origin
+        xyz="0.0170273604124161 0.00221903633839303 0.0486369547044152"
+        rpy="0 0 0" />
+      <mass
+        value="0.658157485580461" />
+      <inertia
+        ixx="0.000461879120374945"
+        ixy="7.30313154563336E-07"
+        ixz="1.48450218369078E-05"
+        iyy="0.000699028823099092"
+        iyz="1.24638385897372E-06"
+        izz="0.000518245753351821" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_0"
+    type="revolute">
+    <origin
+      xyz="0 0 0.0963519999999996"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="link_1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.14159265359"
+      upper="3.14159265359"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link_2">
+    <inertial>
+      <origin
+        xyz="0.00896948807389246 -0.000551447202871847 0.217173738204803"
+        rpy="0 0 0" />
+      <mass
+        value="0.520143279290704" />
+      <inertia
+        ixx="0.00139939822910186"
+        ixy="7.02704578368816E-09"
+        ixz="-5.84588275065204E-06"
+        iyy="0.00138991316090353"
+        iyz="-4.0585538823093E-09"
+        izz="0.00011885606315368" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_1"
+    type="revolute">
+    <origin
+      xyz="0.0199999999999994 0 0.0570000000000001"
+      rpy="0 0 0" />
+    <parent
+      link="link_1" />
+    <child
+      link="link_2" />
+    <axis
+      xyz="0 -1 0" />
+    <limit
+      lower="-3.14159265359"
+      upper="3.14159265359"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link_3">
+    <inertial>
+      <origin
+        xyz="0.116840604140589 -0.00067873753567148 0.0537736076061798"
+        rpy="0 0 0" />
+      <mass
+        value="0.303446681930296" />
+      <inertia
+        ixx="9.61115485046678E-05"
+        ixy="-4.05930567233032E-09"
+        ixz="-2.33283733883302E-05"
+        iyy="0.000199643341936575"
+        iyz="-7.00409767190169E-09"
+        izz="0.000158700505319707" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_2"
+    type="revolute">
+    <origin
+      xyz="0.0299999999999999 0 0.35"
+      rpy="0 0 0" />
+    <parent
+      link="link_2" />
+    <child
+      link="link_3" />
+    <axis
+      xyz="0 -1 0" />
+    <limit
+      lower="-3.14159265359"
+      upper="3.14159265359"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link_4">
+    <inertial>
+      <origin
+        xyz="0.0636872025032117 4.15835862107732E-05 -0.000847055499593963"
+        rpy="0 0 0" />
+      <mass
+        value="0.211552053843195" />
+      <inertia
+        ixx="0.000115244428123329"
+        ixy="-2.20918148593184E-08"
+        ixz="8.11555403598452E-09"
+        iyy="8.75465189519851E-05"
+        iyz="4.01345879702496E-13"
+        izz="0.000129727809308006" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_3"
+    type="revolute">
+    <origin
+      xyz="0.180999999999999 0 0.0600000000000003"
+      rpy="0 0 0" />
+    <parent
+      link="link_3" />
+    <child
+      link="link_4" />
+    <axis
+      xyz="0 -1 0" />
+    <limit
+      lower="-3.14159265359"
+      upper="3.14159265359"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link_5">
+    <inertial>
+      <origin
+        xyz="0.0699270389108238 -9.06183297457613E-09 0.00129048907573015"
+        rpy="0 0 0" />
+      <mass
+        value="0.213617631664316" />
+      <inertia
+        ixx="0.000129047148258766"
+        ixy="1.28788669597982E-12"
+        ixz="8.11487714389353E-09"
+        iyy="0.000122255249245514"
+        iyz="-2.20920499566926E-08"
+        izz="7.53849113028835E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/link_5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_4"
+    type="revolute">
+    <origin
+      xyz="0.0799999999999995 0 0.0002000000000002"
+      rpy="0 0 0" />
+    <parent
+      link="link_4" />
+    <child
+      link="link_5" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      lower="-3.14159265359"
+      upper="3.14159265359"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="gripper">
+    <inertial>
+      <origin
+        xyz="0.0590321096192337 -1.03587594283656E-07 -2.63925990725555E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.3452622912697" />
+      <inertia
+        ixx="0.000186088707407923"
+        ixy="-1.87896179853624E-13"
+        ixz="8.11307191946995E-09"
+        iyy="8.41597502421193E-05"
+        iyz="1.04049588154111E-06"
+        izz="0.000173175083578392" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/gripper.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://trossen_arm_description/meshes/follower/gripper.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint_5"
+    type="revolute">
+    <origin
+      xyz="0.103524999999999 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="link_5" />
+    <child
+      link="gripper" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="-3.14159265359"
+      upper="3.14159265359"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>

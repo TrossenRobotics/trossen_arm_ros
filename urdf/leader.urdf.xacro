@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com)
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
-<robot
-  name="trossen_arm_description">
+<robot name="leader">
   <link
     name="base_link">
     <inertial>
@@ -85,7 +84,7 @@
     </collision>
   </link>
   <joint
-    name="joint_1"
+    name="joint_0"
     type="revolute">
     <origin
       xyz="0 0 0.081223"
@@ -143,7 +142,7 @@
     </collision>
   </link>
   <joint
-    name="joint_2"
+    name="joint_1"
     type="revolute">
     <origin
       xyz="0.02 0 0.035"
@@ -201,7 +200,7 @@
     </collision>
   </link>
   <joint
-    name="joint_3"
+    name="joint_2"
     type="revolute">
     <origin
       xyz="0.03 0 0.35"
@@ -259,7 +258,7 @@
     </collision>
   </link>
   <joint
-    name="joint_4"
+    name="joint_3"
     type="revolute">
     <origin
       xyz="0.181 0 0.06"
@@ -317,7 +316,7 @@
     </collision>
   </link>
   <joint
-    name="joint_5"
+    name="joint_4"
     type="revolute">
     <origin
       xyz="0.08 0 0.0002"
@@ -375,7 +374,7 @@
     </collision>
   </link>
   <joint
-    name="joint_6"
+    name="joint_5"
     type="revolute">
     <origin
       xyz="0.10353 0 0"

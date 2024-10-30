@@ -74,7 +74,10 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_model',
-            choices=('leader'),
+            choices=(
+                'follower',
+                'leader',
+            ),
             default_value='leader',
         )
     )
