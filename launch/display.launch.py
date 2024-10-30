@@ -4,7 +4,10 @@
 # Proprietary and confidential
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, LogInfo
+from launch.actions import (
+    DeclareLaunchArgument,
+    OpaqueFunction,
+)
 from launch.conditions import IfCondition
 from launch.substitutions import (
     Command,
@@ -17,14 +20,11 @@ from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
 
 def launch_setup(context, *args, **kwargs):
-    robot_name_launch_arg = LaunchConfiguration('robot_name')
     use_rviz_launch_arg = LaunchConfiguration('use_rviz')
     use_joint_pub_launch_arg = LaunchConfiguration('use_joint_pub')
     use_joint_pub_gui_launch_arg = LaunchConfiguration('use_joint_pub_gui')
     rvizconfig_launch_arg = LaunchConfiguration('rvizconfig')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
-
-    loginfo = LogInfo(msg=robot_description_launch_arg)
 
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
@@ -32,21 +32,21 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{
             'robot_description': ParameterValue(robot_description_launch_arg, value_type=str),
         }],
-        output={'both': 'screen'},
+        output={'both': 'log'},
     )
 
     joint_state_publisher_node = Node(
         condition=IfCondition(use_joint_pub_launch_arg),
         package='joint_state_publisher',
         executable='joint_state_publisher',
-        output={'both': 'screen'},
+        output={'both': 'log'},
     )
 
     joint_state_publisher_gui_node = Node(
         condition=IfCondition(use_joint_pub_gui_launch_arg),
         package='joint_state_publisher_gui',
         executable='joint_state_publisher_gui',
-        output={'both': 'screen'},
+        output={'both': 'log'},
     )
 
     rviz2_node = Node(
@@ -57,7 +57,7 @@ def launch_setup(context, *args, **kwargs):
         arguments=[
             '-d', rvizconfig_launch_arg,
         ],
-        output={'both': 'screen'},
+        output={'both': 'log'},
     )
 
     return [
@@ -65,7 +65,6 @@ def launch_setup(context, *args, **kwargs):
         joint_state_publisher_node,
         joint_state_publisher_gui_node,
         rviz2_node,
-        loginfo,
     ]
 
 
@@ -79,15 +78,6 @@ def generate_launch_description():
                 'leader',
             ),
             default_value='leader',
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'robot_name',
-            default_value=LaunchConfiguration('robot_model'),
-            description=(
-                'name of the robot (typically equal to `robot_model`, but could be anything).'
-            ),
         )
     )
     declared_arguments.append(
@@ -134,7 +124,7 @@ def generate_launch_description():
                 FindPackageShare('trossen_arm_description'),
                 'urdf',
                 LaunchConfiguration('robot_model'),
-                ]), '.urdf.xacro',
+                ]), '.urdf',
             ])
         )
     )
