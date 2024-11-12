@@ -25,7 +25,7 @@
         rpy="-1.57079632679 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/base_link.STL" />
+          filename="package://trossen_arm_description/meshes/follower/base_link.stl" />
       </geometry>
       <material
         name="">
@@ -39,7 +39,7 @@
         rpy="-1.57079632679 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/base_link.STL" />
+          filename="package://trossen_arm_description/meshes/follower/base_link.stl" />
       </geometry>
     </collision>
   </link>
@@ -65,7 +65,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_1.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_1.stl" />
       </geometry>
       <material
         name="">
@@ -79,7 +79,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_1.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_1.stl" />
       </geometry>
     </collision>
   </link>
@@ -123,7 +123,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_2.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_2.stl" />
       </geometry>
       <material
         name="">
@@ -137,7 +137,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_2.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_2.stl" />
       </geometry>
     </collision>
   </link>
@@ -181,7 +181,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_3.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_3.stl" />
       </geometry>
       <material
         name="">
@@ -195,7 +195,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_3.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_3.stl" />
       </geometry>
     </collision>
   </link>
@@ -239,7 +239,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_4.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_4.stl" />
       </geometry>
       <material
         name="">
@@ -253,7 +253,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_4.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_4.stl" />
       </geometry>
     </collision>
   </link>
@@ -297,7 +297,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_5.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_5.stl" />
       </geometry>
       <material
         name="">
@@ -311,7 +311,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/link_5.STL" />
+          filename="package://trossen_arm_description/meshes/follower/link_5.stl" />
       </geometry>
     </collision>
   </link>
@@ -355,7 +355,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/gripper.STL" />
+          filename="package://trossen_arm_description/meshes/follower/gripper.stl" />
       </geometry>
       <material
         name="">
@@ -369,7 +369,7 @@
         rpy="0 0 0" />
       <geometry>
         <mesh
-          filename="package://trossen_arm_description/meshes/follower/gripper.STL" />
+          filename="package://trossen_arm_description/meshes/follower/gripper.stl" />
       </geometry>
     </collision>
   </link>

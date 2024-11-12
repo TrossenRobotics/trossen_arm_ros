@@ -1,11 +1,11 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 0
+    Help Height: 128
     Name: Displays
     Property Tree Widget:
       Expanded: ~
       Splitter Ratio: 0.6176470518112183
-    Tree Height: 817
+    Tree Height: 689
 Visualization Manager:
   Class: ""
   Displays:
@@ -38,20 +38,49 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: robot_description
-      Enabled: false
+      Enabled: true
       Links:
-        All Links Enabled: true
+        All Links Enabled:
+          {}
         Expand Joint Details: false
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
+        base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        gripper:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        link_1:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        link_2:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        link_3:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        link_4:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        link_5:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
       Mass Properties:
         Inertia: false
         Mass: false
       Name: RobotModel
       TF Prefix: ""
       Update Interval: 0
-      Value: false
+      Value: true
       Visual Enabled: true
     - Class: rviz_default_plugins/TF
       Enabled: true
