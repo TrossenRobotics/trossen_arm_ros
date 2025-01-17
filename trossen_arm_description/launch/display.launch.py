@@ -32,21 +32,21 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{
             'robot_description': ParameterValue(robot_description_launch_arg, value_type=str),
         }],
-        output={'both': 'log'},
+        output={'both': 'screen'},
     )
 
     joint_state_publisher_node = Node(
         condition=IfCondition(use_joint_pub_launch_arg),
         package='joint_state_publisher',
         executable='joint_state_publisher',
-        output={'both': 'log'},
+        output={'both': 'screen'},
     )
 
     joint_state_publisher_gui_node = Node(
         condition=IfCondition(use_joint_pub_gui_launch_arg),
         package='joint_state_publisher_gui',
         executable='joint_state_publisher_gui',
-        output={'both': 'log'},
+        output={'both': 'screen'},
     )
 
     rviz2_node = Node(
@@ -57,7 +57,7 @@ def launch_setup(context, *args, **kwargs):
         arguments=[
             '-d', rvizconfig_launch_arg,
         ],
-        output={'both': 'log'},
+        output={'both': 'screen'},
     )
 
     return [
@@ -73,11 +73,12 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_model',
-            choices=(
-                'follower',
-                'leader',
-            ),
-            default_value='leader',
+            # choices=(
+            #     'follower',
+            #     'follower_7dof',
+            #     'leader',
+            # ),
+            # default_value='6dof_left',
         )
     )
     declared_arguments.append(
