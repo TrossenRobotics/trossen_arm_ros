@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="ros2_control_joint" params="name">
+    <joint name="${name}">
+      <command_interface name="position"/>
+      <!-- <command_interface name="velocity"/> -->
+      <!-- <command_interface name="effort"/> -->
+      <state_interface name="position"/>
+      <state_interface name="velocity"/>
+      <state_interface name="effort"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="wxai_ros2_control" params="name">
+
+    <ros2_control name="{name}" type="system">
+      <hardware>
+        <plugin>trossen_arm_hardware/TrossenArmHardwareInterface</plugin>
+        <param name="robot_model" value="0"/> <!-- 0: wxais_v0 -->
+        <param name="ip_address" value="192.168.1.2"/>
+      </hardware>
+      <xacro:ros2_control_joint name="joint_1"/>
+      <xacro:ros2_control_joint name="joint_2"/>
+      <xacro:ros2_control_joint name="joint_3"/>
+      <xacro:ros2_control_joint name="joint_4"/>
+      <xacro:ros2_control_joint name="joint_5"/>
+      <xacro:ros2_control_joint name="joint_6"/>
+    </ros2_control>
+
+  </xacro:macro>
+
+</robot>
