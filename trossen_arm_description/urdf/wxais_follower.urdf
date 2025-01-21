@@ -2,7 +2,7 @@
 <!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
      Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
      For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
-<robot name="wxai_follower">
+<robot name="wxais_follower">
   <link name="base_link">
     <inertial>
       <origin xyz="0.00052268 -0.00005365 0.03202305" rpy="0 0 0"/>
@@ -12,7 +12,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/base_link.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/base_link.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -21,7 +21,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/base_link.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/base_link.stl" />
       </geometry>
     </collision>
   </link>
@@ -34,7 +34,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_1.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_1.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -43,7 +43,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_1.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_1.stl" />
       </geometry>
     </collision>
   </link>
@@ -52,7 +52,7 @@
     <parent link="base_link" />
     <child link="link_1" />
     <axis xyz="0 0 1" />
-    <limit lower="-3.14" upper="3.14" effort="0" velocity="0" />
+    <limit lower="-3.14" upper="3.14" effort="27.0" velocity="3.14" />
   </joint>
   <link name="link_2">
     <inertial>
@@ -63,7 +63,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_2.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_2.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -72,7 +72,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_2.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_2.stl" />
       </geometry>
     </collision>
   </link>
@@ -80,8 +80,8 @@
     <origin xyz="0.02 0 0.04625" rpy="0 0 0" />
     <parent link="link_1" />
     <child link="link_2" />
-    <axis xyz="0 -1 0" />
-    <limit lower="-3.14" upper="3.14" effort="0" velocity="0" />
+    <axis xyz="0 1 0" />
+    <limit lower="0.0" upper="2.356" effort="27.0" velocity="3.14" />
   </joint>
   <link name="link_3">
     <inertial>
@@ -92,7 +92,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_3.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_3.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -101,7 +101,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_3.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_3.stl" />
       </geometry>
     </collision>
   </link>
@@ -121,7 +121,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_4.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_4.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -130,7 +130,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_4.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_4.stl" />
       </geometry>
     </collision>
   </link>
@@ -139,7 +139,7 @@
     <parent link="link_3" />
     <child link="link_4" />
     <axis xyz="0 -1 0" />
-    <limit lower="-3.14" upper="3.14" effort="0" velocity="0" />
+    <limit lower="-1.571" upper="1.571" effort="7.0" velocity="3.14" />
   </joint>
   <link name="link_5">
     <inertial>
@@ -150,7 +150,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_5.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_5.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -159,7 +159,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_5.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_5.stl" />
       </geometry>
     </collision>
   </link>
@@ -168,7 +168,7 @@
     <parent link="link_4" />
     <child link="link_5" />
     <axis xyz="0 0 -1" />
-    <limit lower="-3.14" upper="3.14" effort="0" velocity="0" />
+    <limit lower="-1.571" upper="1.571" effort="7.0" velocity="3.14" />
   </joint>
   <link name="link_6">
     <inertial>
@@ -179,7 +179,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_6.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_6.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -188,7 +188,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/link_6.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/link_6.stl" />
       </geometry>
     </collision>
   </link>
@@ -197,7 +197,7 @@
     <parent link="link_5" />
     <child link="link_6" />
     <axis xyz="1 0 0" />
-    <limit lower="-3.14" upper="3.14" effort="0" velocity="0" />
+    <limit lower="-3.14" upper="3.14" effort="7.0" velocity="3.14" />
   </joint>
   <link name="gripper_left">
     <inertial>
@@ -208,7 +208,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/gripper_left.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/gripper_left.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -217,7 +217,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/gripper_left.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/gripper_left.stl" />
       </geometry>
     </collision>
   </link>
@@ -226,7 +226,7 @@
     <parent link="link_6" />
     <child link="gripper_left" />
     <axis xyz="0 1 0" />
-    <limit lower="0" upper="0.05" effort="0" velocity="0" />
+    <limit lower="0" upper="0.044" effort="400.0" velocity="0.0875" />
   </joint>
   <link name="gripper_right">
     <inertial>
@@ -237,7 +237,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/gripper_right.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/gripper_right.stl" />
       </geometry>
       <material name="">
         <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -246,7 +246,7 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0" />
       <geometry>
-        <mesh filename="package://trossen_arm_description/meshes/wxai_follower/gripper_right.stl" />
+        <mesh filename="package://trossen_arm_description/meshes/wxais_follower/gripper_right.stl" />
       </geometry>
     </collision>
   </link>
@@ -255,6 +255,6 @@
     <parent link="link_6" />
     <child link="gripper_right" />
     <axis xyz="0 -1 0" />
-    <limit lower="0" upper="0.05" effort="0" velocity="0" />
+    <limit lower="-0.044" upper="0.0" effort="400.0" velocity="0.0875" />
   </joint>
 </robot>
