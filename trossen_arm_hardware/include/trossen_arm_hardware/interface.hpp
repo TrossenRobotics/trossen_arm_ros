@@ -41,7 +41,7 @@
 #include "rclcpp/logger.hpp"
 #include "rclcpp/rclcpp.hpp"
 
-#include "trossen_arm_driver/trossen_arm_driver.hpp"
+#include "libtrossen_arm/trossen_arm.hpp"
 
 namespace trossen_arm_hardware
 {
@@ -107,6 +107,9 @@ protected:
 
   // Joint position commands in radians
   std::vector<double> joint_position_commands_;
+
+  // Flag to indicate the first read/write update
+  bool first_update_{true};
 
   // // Joint velocity commands in radians per second
   // std::vector<double> joint_velocity_commands_;

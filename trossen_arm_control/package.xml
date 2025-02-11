@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>trossen_arm_description</name>
+  <name>trossen_arm_control</name>
   <version>1.0.0</version>
-  <description>Descriptions for Trossen Arms</description>
+  <description>Configurations for using Trossen Arm hardware with ros2_control</description>
 
   <author email="trsupport@trossenrobotics.com">Trossen Robotics</author>
   <maintainer email="trsupport@trossenrobotics.com">Trossen Robotics</maintainer>
@@ -12,12 +12,13 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>joint_state_publisher_gui</depend>
+  <depend>controller_manager</depend>
+  <depend>joint_state_publisher</depend>
+  <depend>joint_trajectory_controller</depend>
   <depend>launch_ros</depend>
   <depend>launch</depend>
-  <depend>robot_state_publisher</depend>
-  <depend>rviz2</depend>
-  <depend>xacro</depend>
+  <depend>trossen_arm_description</depend>
+  <depend>trossen_arm_hardware</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

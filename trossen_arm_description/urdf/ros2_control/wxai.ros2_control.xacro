@@ -14,20 +14,25 @@
 
   <xacro:macro name="wxai_ros2_control" params="name">
 
-    <ros2_control name="{name}" type="system">
+    <ros2_control name="TrossenArmHardwareInterface" type="system">
       <hardware>
         <plugin>trossen_arm_hardware/TrossenArmHardwareInterface</plugin>
-        <param name="robot_model" value="0"/> <!-- 0: wxais_v0 -->
-        <param name="ip_address" value="192.168.1.2"/>
+        <param name="robot_model">0</param> <!-- 0: wxais_v0 -->
+        <!-- <param name="ip_address">127.0.0.1</param> -->
+        <param name="port">50000</param>
+        <param name="ip_address">192.168.1.2</param>
       </hardware>
+      <xacro:ros2_control_joint name="joint_0"/>
       <xacro:ros2_control_joint name="joint_1"/>
       <xacro:ros2_control_joint name="joint_2"/>
       <xacro:ros2_control_joint name="joint_3"/>
       <xacro:ros2_control_joint name="joint_4"/>
       <xacro:ros2_control_joint name="joint_5"/>
-      <xacro:ros2_control_joint name="joint_6"/>
+      <xacro:ros2_control_joint name="gripper"/>
     </ros2_control>
 
   </xacro:macro>
+
+  <xacro:wxai_ros2_control name="wxai"/>
 
 </robot>

@@ -5,9 +5,10 @@
   <version>1.0.0</version>
   <description>Hardware interfaces for Trossen Arms via ros2_control</description>
 
-  <author email="trsupport@trossenrobotics.com">Luke Schmitt</author>
+  <author email="trsupport@trossenrobotics.com">Trossen Robotics</author>
+  <maintainer email="trsupport@trossenrobotics.com">Trossen Robotics</maintainer>
+
   <license>BSD-3-Clause</license>
-  <maintainer email="trsupport@trossenrobotics.com">Luke Schmitt</maintainer>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
@@ -15,7 +16,10 @@
   <depend>pluginlib</depend>
   <depend>rclcpp_lifecycle</depend>
   <depend>rclcpp</depend>
-  <depend>trossen_arm_driver</depend>
+  <depend>libtrossen_arm</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

@@ -67,11 +67,11 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     driver_ip_address_ = DRIVER_IP_ADDRESS_DEFAULT;
   }
 
-  // TODO(lukeschmitt-tr): Log robot_model, ip_address
-
   joint_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_velocities_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_efforts_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
+
+  joint_position_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
 
   for (const auto & joint : info_.joints) {
     // Only position command interfaces are supported for now
@@ -79,24 +79,30 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has %zu command interfaces found. 1 expected.",
-        joint.name.c_str(), joint.command_interfaces.size());
+        joint.name.c_str(),
+        joint.command_interfaces.size());
       return CallbackReturn::ERROR;
     }
 
+    // Only position expected
     if (joint.command_interfaces.at(0).name != HW_IF_POSITION) {
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' command interface found. '%s' expected",
-        joint.name.c_str(), joint.command_interfaces.at(0).name.c_str(), HW_IF_POSITION);
+        joint.name.c_str(),
+        joint.command_interfaces.at(0).name.c_str(),
+        HW_IF_POSITION);
       return CallbackReturn::ERROR;
     }
 
     // Each joint has 3 state interfaces: position, velocity, effort (in that order)
+    // Expect three state interfaces
     if (joint.state_interfaces.size() != 3) {
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has %zu state interfaces found. 3 expected.",
-        joint.name.c_str(), joint.state_interfaces.size());
+        joint.name.c_str(),
+        joint.state_interfaces.size());
       return CallbackReturn::ERROR;
     }
 
@@ -105,7 +111,9 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' state interface found. '%s' expected",
-        joint.name.c_str(), joint.state_interfaces.at(0).name.c_str(), HW_IF_POSITION);
+        joint.name.c_str(),
+        joint.state_interfaces.at(0).name.c_str(),
+        HW_IF_POSITION);
       return CallbackReturn::ERROR;
     }
 
@@ -114,7 +122,9 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' state interface found. '%s' expected",
-        joint.name.c_str(), joint.state_interfaces.at(1).name.c_str(), HW_IF_VELOCITY);
+        joint.name.c_str(),
+        joint.state_interfaces.at(1).name.c_str(),
+        HW_IF_VELOCITY);
       return CallbackReturn::ERROR;
     }
 
@@ -123,7 +133,9 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' state interface found. '%s' expected",
-        joint.name.c_str(), joint.state_interfaces.at(2).name.c_str(), HW_IF_EFFORT);
+        joint.name.c_str(),
+        joint.state_interfaces.at(2).name.c_str(),
+        HW_IF_EFFORT);
       return CallbackReturn::ERROR;
     }
   }
@@ -135,16 +147,25 @@ std::vector<hardware_interface::StateInterface>
 TrossenArmHardwareInterface::export_state_interfaces()
 {
   std::vector<hardware_interface::StateInterface> state_interfaces;
-  for (size_t i = 0; i < info_.joints.size(); ++i) {
+  for (size_t i = 0; i < info_.joints.size(); i++) {
+    // Position state interfaces
     state_interfaces.emplace_back(
       hardware_interface::StateInterface(
-        info_.joints[i].name, HW_IF_POSITION, &joint_positions_[i]));
+        info_.joints[i].name,
+        HW_IF_POSITION,
+        &joint_positions_[i]));
+    // Velocity state interfaces
     state_interfaces.emplace_back(
       hardware_interface::StateInterface(
-        info_.joints[i].name, HW_IF_VELOCITY, &joint_velocities_[i]));
+        info_.joints[i].name,
+        HW_IF_VELOCITY,
+        &joint_velocities_[i]));
+    // Effort state interfaces
     state_interfaces.emplace_back(
       hardware_interface::StateInterface(
-        info_.joints[i].name, HW_IF_EFFORT, &joint_efforts_[i]));
+        info_.joints[i].name,
+        HW_IF_EFFORT,
+        &joint_efforts_[i]));
   }
 
   return state_interfaces;
@@ -155,9 +176,12 @@ TrossenArmHardwareInterface::export_command_interfaces()
 {
   std::vector<hardware_interface::CommandInterface> command_interfaces;
   for (size_t i = 0; i < info_.joints.size(); i++) {
+    // Position command interfaces
     command_interfaces.emplace_back(
       hardware_interface::CommandInterface(
-        info_.joints[i].name, HW_IF_POSITION, &joint_position_commands_[i]));
+        info_.joints[i].name,
+        HW_IF_POSITION,
+        &joint_position_commands_[i]));
   }
   return command_interfaces;
 }
@@ -181,21 +205,27 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
     return CallbackReturn::ERROR;
   }
 
-  if (!arm_driver_->configure(
-    robot_model_,
-    driver_ip_address_.c_str(),
-    driver_port_,
-    driver_timeout_us_))
-  {
+  try {
+    arm_driver_->configure(
+      robot_model_,
+      trossen_arm::StandardEndEffector::wxai_v0_follower,
+      driver_ip_address_.c_str(),
+      true);  // TODO(lukeschmitt-tr): Make this configuration (or remove it)
+  } catch (const std::exception & e) {
     RCLCPP_FATAL(
       get_logger(),
-      "Failed to configure TrossenArmDriver.");
+      "Failed to configure TrossenArmDriver: %s", e.what());
     return CallbackReturn::ERROR;
   }
 
+  // Get initial states
+  do {
+    arm_driver_->request_robot_output();
+  } while (!arm_driver_->receive_robot_output());
+
   RCLCPP_INFO(
     get_logger(),
-    "TrossenArmDriver configured with model %d, ip %s, port %d, timeout %d",
+    "TrossenArmDriver configured with model %d, IP Address '%s', port '%d', timeout %dus.",
     static_cast<int>(robot_model_), driver_ip_address_.c_str(), driver_port_, driver_timeout_us_);
 
   return CallbackReturn::SUCCESS;
@@ -204,27 +234,33 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
 CallbackReturn
 TrossenArmHardwareInterface::on_activate(const rclcpp_lifecycle::State & /*previous_state*/)
 {
-  for (auto & position : joint_position_commands_) {
-    if (std::isnan(position)) {
-      position = 0.0;
+  first_update_ = true;
+
+  arm_driver_->set_modes(
+    std::vector<trossen_arm::Mode>(arm_driver_->get_num_joints(), trossen_arm::Mode::position));
+
+  auto modes = arm_driver_->get_modes();
+  std::string msg_modes = "Modes are: ";
+  for (auto mode : modes) {
+    msg_modes += std::to_string(static_cast<int8_t>(mode)) + " ";
+  }
+  RCLCPP_INFO(get_logger(), msg_modes.c_str());
+
+  // Validate position mode
+  if (std::any_of(
+      modes.begin(), modes.end(),
+      [](trossen_arm::Mode mode) {return mode != trossen_arm::Mode::position;}))
+  {
+    std::string msg_modes = "Joint modes are not all position. Modes are: ";
+    for (auto mode : modes) {
+      msg_modes += std::to_string(static_cast<int8_t>(mode)) + " ";
     }
-  }
-
-  // Enable the arm
-  if (!arm_driver_->enable()) {
-    RCLCPP_FATAL(
-      get_logger(),
-      "Failed to enable TrossenArmDriver.");
+    RCLCPP_ERROR(get_logger(), msg_modes.c_str());
     return CallbackReturn::ERROR;
   }
 
-  // Sanity check that the arm is enabled
-  if (!arm_driver_->get_enabled()) {
-    RCLCPP_FATAL(
-      get_logger(),
-      "TrossenArmDriver failed to enable.");
-    return CallbackReturn::ERROR;
-  }
+  // Update the state of the robot
+  this->read(rclcpp::Time(0.0), rclcpp::Duration(0, 0));
 
   RCLCPP_INFO(get_logger(), "TrossenArmDriver enabled.");
 
@@ -236,14 +272,41 @@ TrossenArmHardwareInterface::read(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
+  // Request and receive robot output
+  // TODO(lukeschmitt-tr): Add timeout
+  do {
+    arm_driver_->request_robot_output();
+  } while (!arm_driver_->receive_robot_output());
+
+  // Get joint positions
   auto positions = arm_driver_->get_positions();
-  joint_positions_ = std::vector<double>(positions.begin(), positions.end());
 
+  // Copy joint positions
+  joint_positions_.clear();
+  joint_positions_.reserve(positions.size());
+  for (const auto & pos : positions) {
+    joint_positions_.push_back(static_cast<double>(pos));
+  }
+
+  // Get joint velocities
   auto velocities = arm_driver_->get_velocities();
-  joint_velocities_ = std::vector<double>(velocities.begin(), velocities.end());
 
+  // Copy joint velocities
+  joint_velocities_.clear();
+  joint_velocities_.reserve(velocities.size());
+  for (const auto & velocity : velocities) {
+    joint_velocities_.push_back(static_cast<double>(velocity));
+  }
+
+  // Get joint efforts
   auto efforts = arm_driver_->get_external_torques();
-  joint_efforts_ = std::vector<double>(efforts.begin(), efforts.end());
+
+  // Copy joint efforts
+  joint_efforts_.clear();
+  joint_efforts_.reserve(efforts.size());
+  for (const auto & effort : efforts) {
+    joint_efforts_.push_back(static_cast<double>(effort));
+  }
 
   return return_type::OK;
 }
@@ -253,45 +316,45 @@ TrossenArmHardwareInterface::write(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // Check that all arm joints are in the correct mode
-  auto modes = arm_driver_->get_modes();
-  if (modes.size() - 1 != joint_position_commands_.size()) {
-    RCLCPP_ERROR(
+  // // Check that all arm joints are in the correct mode
+  // auto modes = arm_driver_->get_modes();
+  // if (modes.size() != joint_position_commands_.size()) {
+  //   RCLCPP_ERROR(
+  //     get_logger(),
+  //     "Number of joint modes does not match number of joint position commands.");
+  //   return return_type::ERROR;
+  // }
+
+  // If first time writing to the hardware, set all commands to the current positions
+  if (first_update_) {
+    joint_position_commands_ = joint_positions_;
+    first_update_ = false;
+    RCLCPP_DEBUG(
       get_logger(),
-      "Number of joint modes does not match number of joint position commands.");
-    return return_type::ERROR;
+      "First write update. Setting joint position commands to current positions.");
   }
 
-  if (std::any_of(
-      modes.begin(), modes.end(),
-      [](trossen_arm::Mode mode) {return mode != trossen_arm::Mode::POSITION;}))
-  {
-    RCLCPP_ERROR(
-      get_logger(),
-      "Joint modes are not all POSITION.");
-    return return_type::ERROR;
-  }
+  auto position_commands = std::vector<float>(joint_positions_.size(), 0.0);
 
-  auto position_commands = std::vector<float>(
-    joint_position_commands_.begin(), joint_position_commands_.end());
+  // Copy joint position commands
+  for (size_t i = 0; i < joint_positions_.size(); i++) {
+    position_commands[i] = static_cast<float>(joint_position_commands_[i]);
+  }
 
   // Validate that we are not sending NaN or INF values to the driver
   if (std::any_of(
       position_commands.begin(), position_commands.end(),
-      [](float position) {return (std::isnan(position) || std::isinf(position));}))
+      [this](float position) {
+        return std::isnan(position) || std::isinf(position);
+      }))
   {
     RCLCPP_ERROR(
       get_logger(),
-      "Position command contains NaN or INF values.");
+      "Commands to the joints contain NaN or INF values.");
     return return_type::ERROR;
   }
 
-  if (!arm_driver_->set_positions(position_commands)) {
-    RCLCPP_ERROR(
-      get_logger(),
-      "Failed to set joint positions.");
-    return return_type::ERROR;
-  }
+  arm_driver_->set_positions(position_commands);
 
   return return_type::OK;
 }
@@ -299,16 +362,9 @@ TrossenArmHardwareInterface::write(
 CallbackReturn
 TrossenArmHardwareInterface::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
 {
-  if (!arm_driver_->disable()) {
-    RCLCPP_FATAL(
-      get_logger(),
-      "Failed to disable TrossenArmDriver.");
-    return CallbackReturn::ERROR;
-  }
+  arm_driver_->set_mode(trossen_arm::Mode::idle);
 
-  RCLCPP_INFO(
-    get_logger(),
-    "TrossenArmDriver disabled.");
+  RCLCPP_INFO(get_logger(), "TrossenArmDriver disabled.");
 
   return CallbackReturn::SUCCESS;
 }
@@ -316,6 +372,7 @@ TrossenArmHardwareInterface::on_deactivate(const rclcpp_lifecycle::State & /*pre
 CallbackReturn
 TrossenArmHardwareInterface::on_cleanup(const rclcpp_lifecycle::State & /*previous_state*/)
 {
+  arm_driver_->cleanup();
   arm_driver_.reset();
 
   return CallbackReturn::SUCCESS;
