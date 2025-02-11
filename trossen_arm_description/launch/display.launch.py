@@ -96,12 +96,10 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_model',
-            # choices=(
-            #     'follower',
-            #     'follower_7dof',
-            #     'leader',
-            # ),
-            # default_value='6dof_left',
+            default_value='wxai',
+            choices=(
+                'wxai'
+            ),
         )
     )
     declared_arguments.append(
@@ -139,6 +137,23 @@ def generate_launch_description():
             description='file path to the config file RViz should load.',
         )
     )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'arm_variant',
+            default_value='base',
+            choices=('base', 'leader', 'follower'),
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'arm_side',
+            default_value='none',
+            choices=('none', 'left', 'right'),
+        )
+    )
+
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_description',
@@ -148,7 +163,9 @@ def generate_launch_description():
                 FindPackageShare('trossen_arm_description'),
                 'urdf',
                 LaunchConfiguration('robot_model'),
-                ]), '.urdf',
+                ]), '.urdf.xacro ',
+            # 'arm_variant:=', 'follower', ' ',
+            # 'arm_side:=', 'left', ' ',
             ])
         )
     )
