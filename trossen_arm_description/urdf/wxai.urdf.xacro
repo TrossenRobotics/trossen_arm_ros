@@ -456,7 +456,7 @@
 
   <xacro:if value="${variant == 'follower'}">
 
-    <link name="camera_mount">
+    <link name="camera_mount_d405">
       <inertial>
         <origin
           xyz="0.03023383 0.00679835 0.05006687"
@@ -475,7 +475,7 @@
           xyz="0 0 0"
           rpy="0 0 0" />
         <geometry>
-          <mesh filename="${mesh_directory}/camera_mount.stl" />
+          <mesh filename="${mesh_directory}/camera_mount_d405.stl" />
         </geometry>
         <material name="">
           <color rgba="0.752941176470588 0.752941176470588 0.752941176470588 1" />
@@ -486,7 +486,7 @@
           xyz="0 0 0"
           rpy="0 0 0" />
         <geometry>
-          <mesh filename="${mesh_directory}/camera_mount.stl" />
+          <mesh filename="${mesh_directory}/camera_mount_d405.stl" />
         </geometry>
       </collision>
     </link>
@@ -496,9 +496,17 @@
         xyz="0 0 0"
         rpy="0 0 0" />
       <parent link="link_6" />
-      <child link="camera_mount" />
+      <child link="camera_mount_d405" />
       <axis xyz="0 0 0" />
     </joint>
+
+    <xacro:include filename="$(find realsense2_description)/urdf/_d405.urdf.xacro" />
+
+    <xacro:sensor_d405 parent="camera_mount_d405">
+      <origin
+        xyz="0.02927207801 0 0.03824951197"
+        rpy="0 ${radians(20)} 0" />
+    </xacro:sensor_d405>
 
   </xacro:if> <!-- variant == 'follower' -->
 
