@@ -8,8 +8,8 @@
     value="6"
     scope="global"/>
 
-  <xacro:arg name="variant"                         default="leader"/>      <!-- 'base', 'leader', 'follower' -->
-  <xacro:arg name="arm_side"                        default="right"/>          <!-- '', 'left', 'right' -->
+  <xacro:arg name="variant"                         default="base"/>      <!-- 'base', 'leader', 'follower' -->
+  <xacro:arg name="arm_side"                        default=""/>          <!-- '', 'left', 'right' -->
   <xacro:arg name="use_world_frame"                 default="false"/>     <!-- 'true', 'false' -->
   <xacro:arg name="base_link_frame"                 default="base_link"/>
 
@@ -167,12 +167,12 @@
         rpy="0 0 0" />
       <mass value="0.68666638" />
       <inertia
-        ixx="0.00102632"
-        ixy="-0.00000319"
-        ixz="-0.00002679"
-        iyy="0.01736118"
-        iyz="-0.00000193"
-        izz="0.01794489" />
+        ixx="0.00064876"
+        ixy="0.00009128"
+        ixz="-0.00052002"
+        iyy="0.00547407"
+        iyz="0.00001159"
+        izz="0.00561509" />
     </inertial>
     <visual>
       <origin
@@ -216,12 +216,12 @@
         rpy="0 0 0" />
       <mass value="0.45789905" />
       <inertia
-        ixx="0.00102632"
-        ixy="-0.00000319"
-        ixz="-0.00002679"
-        iyy="0.01736118"
-        iyz="-0.00000193"
-        izz="0.01794489" />
+        ixx="0.00053839"
+        ixy="0.00000690"
+        ixz="-0.00018164"
+        iyy="0.00066138"
+        iyz="0.00000724"
+        izz="0.00042116" />
     </inertial>
     <visual>
       <origin
@@ -500,7 +500,7 @@
       <axis xyz="0 0 0" />
     </joint>
 
-    <xacro:include filename="$(find realsense2_description)/urdf/_d405.urdf.xacro" />
+    <xacro:include filename="$(find trossen_arm_description)/urdf/peripherals/rs_d405.urdf.xacro" />
 
     <xacro:sensor_d405 parent="camera_mount_d405">
       <origin
@@ -840,10 +840,10 @@
         <mass value="0.03090786" />
         <inertia
           ixx="0.00000769"
-          ixy="0.00000321"
+          ixy="-0.00000321"
           ixz="0.00000029"
           iyy="0.00001487"
-          iyz="-0.00000020"
+          iyz="0.00000020"
           izz="0.00001184" />
       </inertial>
       <visual>
