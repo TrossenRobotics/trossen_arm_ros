@@ -9,20 +9,3 @@ moveit_setup_assistant_config:
     author_name: Luke Schmitt
     author_email: trsupport@trossenrobotics.com
     generated_timestamp: 1739905028
-  control_xacro:
-    command:
-      - position
-    state:
-      - position
-      - velocity
-      - effort
-  modified_urdf:
-    xacros:
-      - control_xacro
-  control_xacro:
-    command:
-      - position
-    state:
-      - position
-      - velocity
-      - effort
