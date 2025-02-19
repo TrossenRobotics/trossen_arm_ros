@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: trossen_arm_description
+    relative_path: urdf/wxai.urdf.xacro
+    xacro_args: variant:=base
+  srdf:
+    relative_path: config/wxai.srdf
+  package_settings:
+    author_name: Luke Schmitt
+    author_email: trsupport@trossenrobotics.com
+    generated_timestamp: 1739905028
