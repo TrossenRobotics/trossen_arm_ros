@@ -158,7 +158,7 @@ def generate_launch_description():
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_model',
-            default_value='wxai_base',
+            default_value='wxai',
             description='model codename of the Trossen Arm such as `wxai`.'
         )
     )
@@ -173,6 +173,22 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
+            'arm_variant',
+            default_value='base',
+            choices=('base', 'leader', 'follower'),
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'arm_side',
+            default_value='none',
+            choices=('none', 'left', 'right'),
+        )
+    )
+
+    declared_arguments.append(
+        DeclareLaunchArgument(
             'robot_description',
             default_value=Command([
             FindExecutable(name='xacro'), ' ',
@@ -180,7 +196,9 @@ def generate_launch_description():
                 FindPackageShare('trossen_arm_description'),
                 'urdf',
                 LaunchConfiguration('robot_model'),
-                ]), '.urdf.xacro',
+                ]), '.urdf.xacro ',
+            'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
+            'arm_side:=', LaunchConfiguration('arm_side'), ' ',
             ])
         )
     )

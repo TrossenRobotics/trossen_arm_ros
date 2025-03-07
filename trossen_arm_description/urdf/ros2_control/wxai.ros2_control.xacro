@@ -12,7 +12,7 @@
     </joint>
   </xacro:macro>
 
-  <xacro:macro name="wxai_ros2_control" params="name">
+  <xacro:macro name="wxai_ros2_control">
 
     <ros2_control name="TrossenArmHardwareInterface" type="system">
       <hardware>
@@ -32,7 +32,5 @@
     </ros2_control>
 
   </xacro:macro>
-
-  <xacro:wxai_ros2_control name="wxai"/>
 
 </robot>

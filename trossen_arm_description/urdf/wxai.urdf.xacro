@@ -17,6 +17,10 @@
   <xacro:property name="variant"                    value="$(arg variant)"/>
   <xacro:property name="arm_side"                   value="$(arg arm_side)"/>
 
+  <xacro:include filename="$(find trossen_arm_description)/urdf/ros2_control/wxai.ros2_control.xacro"/>
+
+  <xacro:wxai_ros2_control/>
+
   <xacro:if value="$(arg use_world_frame)">
     <link name="world"/>
     <joint name="fixed" type="fixed">
