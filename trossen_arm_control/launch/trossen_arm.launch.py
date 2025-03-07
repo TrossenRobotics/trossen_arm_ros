@@ -70,12 +70,13 @@ def launch_setup(context, *args, **kwargs):
     controller_manager_node = Node(
         package='controller_manager',
         executable='ros2_control_node',
-        namespace=robot_name_launch_arg,
+        # namespace=robot_name_launch_arg,
         parameters=[
             ros2_control_controllers_config_parameter_file,
         ],
         remappings=[
-            ('~/robot_description', f'/{robot_name_launch_arg}/robot_description'),
+            ('~/robot_description', '/robot_description'),
+            # ('~/robot_description', f'/{robot_name_launch_arg}/robot_description'),
         ],
         output={'both': 'screen'},
     )
@@ -84,8 +85,10 @@ def launch_setup(context, *args, **kwargs):
         name='arm_controller_spawner',
         package='controller_manager',
         executable='spawner',
+        # namespace=robot_name_launch_arg,
         arguments=[
-            '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
+            # '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
+            '--controller-manager', '/controller_manager',
             'arm_controller',
         ],
         output={'both': 'screen'},
@@ -95,8 +98,10 @@ def launch_setup(context, *args, **kwargs):
         name='gripper_controller_spawner',
         package='controller_manager',
         executable='spawner',
+        # namespace=robot_name_launch_arg,
         arguments=[
-            '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
+            # '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
+            '--controller-manager', '/controller_manager',
             'gripper_controller',
         ],
         output={'both': 'screen'},
@@ -106,8 +111,10 @@ def launch_setup(context, *args, **kwargs):
         name='joint_state_broadcaster_spawner',
         package='controller_manager',
         executable='spawner',
+        # namespace=robot_name_launch_arg,
         arguments=[
-            '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
+            # '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
+            '--controller-manager', '/controller_manager',
             'joint_state_broadcaster',
         ],
         remappings=[
@@ -138,7 +145,7 @@ def launch_setup(context, *args, **kwargs):
                 target_action=controller_manager_node,
                 on_start=[
                     spawn_joint_state_broadcaster_node,
-                    # spawn_arm_controller_node,
+                    spawn_arm_controller_node,
                     # spawn_gripper_controller_node,
                 ]
             )

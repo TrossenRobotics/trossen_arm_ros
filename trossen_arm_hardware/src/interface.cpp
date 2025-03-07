@@ -40,10 +40,13 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     return CallbackReturn::ERROR;
   }
 
-  // Get robot model, ip, port, timeout
-
+  // Get robot model, ip
   try {
     robot_model_ = trossen_arm::Model(std::stoi(info.hardware_parameters.at("robot_model")));
+    RCLCPP_INFO(
+      get_logger(),
+      "Parameter 'robot_model' set to '%d'.",
+      static_cast<int>(robot_model_));
   } catch (const std::out_of_range & /*e*/) {
     RCLCPP_FATAL(
       get_logger(),
@@ -59,12 +62,29 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
 
   try {
     driver_ip_address_ = info.hardware_parameters.at("ip_address");
+    RCLCPP_INFO(
+      get_logger(),
+      "Parameter 'ip_address' set to '%s'.",
+      driver_ip_address_.c_str());
   } catch (const std::out_of_range & /*e*/) {
     RCLCPP_FATAL(
       get_logger(),
       "Parameter 'ip_address' not specified. Defaulting to '%s'.",
       DRIVER_IP_ADDRESS_DEFAULT.c_str());
     driver_ip_address_ = DRIVER_IP_ADDRESS_DEFAULT;
+  }
+
+  try {
+    update_period_ = std::stof(info.hardware_parameters.at("update_period"));
+    RCLCPP_INFO(
+      get_logger(),
+      "Parameter 'update_period' set to '%f'.",
+      update_period_);
+  } catch (const std::out_of_range & /*e*/) {
+    RCLCPP_WARN(
+      get_logger(),
+      "Parameter 'update_period' not specified. Defaulting to '%f'.",
+      update_period_);
   }
 
   joint_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
@@ -208,7 +228,7 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
   try {
     arm_driver_->configure(
       robot_model_,
-      trossen_arm::StandardEndEffector::wxai_v0_follower,
+      trossen_arm::StandardEndEffector::wxai_v0_base,
       driver_ip_address_.c_str(),
       true);  // TODO(lukeschmitt-tr): Make this configuration (or remove it)
   } catch (const std::exception & e) {
@@ -217,11 +237,6 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
       "Failed to configure TrossenArmDriver: %s", e.what());
     return CallbackReturn::ERROR;
   }
-
-  // Get initial states
-  do {
-    arm_driver_->request_robot_output();
-  } while (!arm_driver_->receive_robot_output());
 
   RCLCPP_INFO(
     get_logger(),
@@ -236,15 +251,11 @@ TrossenArmHardwareInterface::on_activate(const rclcpp_lifecycle::State & /*previ
 {
   first_update_ = true;
 
-  arm_driver_->set_modes(
-    std::vector<trossen_arm::Mode>(arm_driver_->get_num_joints(), trossen_arm::Mode::position));
+  arm_driver_->set_all_modes(trossen_arm::Mode::position);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   auto modes = arm_driver_->get_modes();
-  std::string msg_modes = "Modes are: ";
-  for (auto mode : modes) {
-    msg_modes += std::to_string(static_cast<int8_t>(mode)) + " ";
-  }
-  RCLCPP_INFO(get_logger(), msg_modes.c_str());
 
   // Validate position mode
   if (std::any_of(
@@ -272,12 +283,6 @@ TrossenArmHardwareInterface::read(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // Request and receive robot output
-  // TODO(lukeschmitt-tr): Add timeout
-  do {
-    arm_driver_->request_robot_output();
-  } while (!arm_driver_->receive_robot_output());
-
   // Get joint positions
   auto positions = arm_driver_->get_positions();
 
@@ -287,6 +292,7 @@ TrossenArmHardwareInterface::read(
   for (const auto & pos : positions) {
     joint_positions_.push_back(static_cast<double>(pos));
   }
+  // joint_positions_.push_back(-joint_positions_.back());
 
   // Get joint velocities
   auto velocities = arm_driver_->get_velocities();
@@ -297,9 +303,10 @@ TrossenArmHardwareInterface::read(
   for (const auto & velocity : velocities) {
     joint_velocities_.push_back(static_cast<double>(velocity));
   }
+  // joint_velocities_.push_back(-joint_velocities_.back());
 
   // Get joint efforts
-  auto efforts = arm_driver_->get_external_torques();
+  auto efforts = arm_driver_->get_external_efforts();
 
   // Copy joint efforts
   joint_efforts_.clear();
@@ -307,6 +314,7 @@ TrossenArmHardwareInterface::read(
   for (const auto & effort : efforts) {
     joint_efforts_.push_back(static_cast<double>(effort));
   }
+  // joint_efforts_.push_back(-joint_efforts_.back());
 
   return return_type::OK;
 }
@@ -316,15 +324,6 @@ TrossenArmHardwareInterface::write(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // // Check that all arm joints are in the correct mode
-  // auto modes = arm_driver_->get_modes();
-  // if (modes.size() != joint_position_commands_.size()) {
-  //   RCLCPP_ERROR(
-  //     get_logger(),
-  //     "Number of joint modes does not match number of joint position commands.");
-  //   return return_type::ERROR;
-  // }
-
   // If first time writing to the hardware, set all commands to the current positions
   if (first_update_) {
     joint_position_commands_ = joint_positions_;
@@ -354,7 +353,7 @@ TrossenArmHardwareInterface::write(
     return return_type::ERROR;
   }
 
-  arm_driver_->set_positions(position_commands);
+  // arm_driver_->set_all_positions(position_commands, update_period_, false);
 
   return return_type::OK;
 }
@@ -362,7 +361,7 @@ TrossenArmHardwareInterface::write(
 CallbackReturn
 TrossenArmHardwareInterface::on_deactivate(const rclcpp_lifecycle::State & /*previous_state*/)
 {
-  arm_driver_->set_mode(trossen_arm::Mode::idle);
+  arm_driver_->set_all_modes(trossen_arm::Mode::idle);
 
   RCLCPP_INFO(get_logger(), "TrossenArmDriver disabled.");
 

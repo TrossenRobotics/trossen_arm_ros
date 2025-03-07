@@ -111,6 +111,9 @@ protected:
   // Flag to indicate the first read/write update
   bool first_update_{true};
 
+  // Period of the update loop in seconds
+  float update_period_{0.1};
+
   // // Joint velocity commands in radians per second
   // std::vector<double> joint_velocity_commands_;
 
