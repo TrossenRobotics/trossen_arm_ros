@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10.0)
-project(trossen_arm_control)
+project(trossen_arm_bringup)
 
 find_package(ament_cmake REQUIRED)
 

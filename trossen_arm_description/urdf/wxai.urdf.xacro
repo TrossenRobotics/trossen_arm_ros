@@ -12,6 +12,7 @@
   <xacro:arg name="arm_side"                        default=""/>          <!-- '', 'left', 'right' -->
   <xacro:arg name="use_world_frame"                 default="false"/>     <!-- 'true', 'false' -->
   <xacro:arg name="base_link_frame"                 default="base_link"/>
+  <xacro:arg name="use_fake_hardware"               default="false"/>     <!-- 'true', 'false' -->
 
   <xacro:property name="mesh_directory"             value="package://trossen_arm_description/meshes/${robot_model}"/>
   <xacro:property name="variant"                    value="$(arg variant)"/>
@@ -19,7 +20,7 @@
 
   <xacro:include filename="$(find trossen_arm_description)/urdf/ros2_control/wxai.ros2_control.xacro"/>
 
-  <xacro:wxai_ros2_control/>
+  <xacro:wxai_ros2_control use_fake_hardware="$(arg use_fake_hardware)"/>
 
   <xacro:if value="$(arg use_world_frame)">
     <link name="world"/>

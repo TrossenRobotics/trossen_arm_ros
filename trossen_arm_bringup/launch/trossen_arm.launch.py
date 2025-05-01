@@ -56,13 +56,12 @@ def launch_setup(context, *args, **kwargs):
 
     robot_model_launch_arg = LaunchConfiguration('robot_model')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
-    robot_name_launch_arg = LaunchConfiguration('robot_name').perform(context)
 
     ros2_control_controllers_config_parameter_file = ParameterFile(
         param_file=PathJoinSubstitution([
-            FindPackageShare('trossen_arm_control'),
+            FindPackageShare('trossen_arm_bringup'),
             'config',
-            'trossen_arm_controllers.yaml',
+            'controllers.yaml',
         ]),
         allow_substs=True,
     )
@@ -70,13 +69,11 @@ def launch_setup(context, *args, **kwargs):
     controller_manager_node = Node(
         package='controller_manager',
         executable='ros2_control_node',
-        # namespace=robot_name_launch_arg,
         parameters=[
             ros2_control_controllers_config_parameter_file,
         ],
         remappings=[
             ('~/robot_description', '/robot_description'),
-            # ('~/robot_description', f'/{robot_name_launch_arg}/robot_description'),
         ],
         output={'both': 'screen'},
     )
@@ -85,9 +82,7 @@ def launch_setup(context, *args, **kwargs):
         name='arm_controller_spawner',
         package='controller_manager',
         executable='spawner',
-        # namespace=robot_name_launch_arg,
         arguments=[
-            # '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
             '--controller-manager', '/controller_manager',
             'arm_controller',
         ],
@@ -98,9 +93,7 @@ def launch_setup(context, *args, **kwargs):
         name='gripper_controller_spawner',
         package='controller_manager',
         executable='spawner',
-        # namespace=robot_name_launch_arg,
         arguments=[
-            # '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
             '--controller-manager', '/controller_manager',
             'gripper_controller',
         ],
@@ -111,9 +104,7 @@ def launch_setup(context, *args, **kwargs):
         name='joint_state_broadcaster_spawner',
         package='controller_manager',
         executable='spawner',
-        # namespace=robot_name_launch_arg,
         arguments=[
-            # '--controller-manager', f'/{robot_name_launch_arg}/controller_manager',
             '--controller-manager', '/controller_manager',
             'joint_state_broadcaster',
         ],
@@ -159,16 +150,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_model',
             default_value='wxai',
+            choices=('wxai'),
             description='model codename of the Trossen Arm such as `wxai`.'
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'robot_name',
-            default_value=LaunchConfiguration('robot_model'),
-            description=(
-                'name of the robot (typically equal to `robot_model`, but could be anything).'
-            ),
         )
     )
     declared_arguments.append(
@@ -176,17 +159,28 @@ def generate_launch_description():
             'arm_variant',
             default_value='base',
             choices=('base', 'leader', 'follower'),
+            description='End effector variant of the Trossen Arm.',
         )
     )
-
     declared_arguments.append(
         DeclareLaunchArgument(
             'arm_side',
             default_value='none',
             choices=('none', 'left', 'right'),
+            description=(
+                'Side of the Trossen Arm. Note that only the wxai follower variant has a left '
+                'and right side.'
+            ),
         )
     )
-
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_fake_hardware',
+            default_value='false',
+            choices=('true', 'false'),
+            description='Use fake hardware interface instead of real hardware interface.'
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_description',
@@ -199,6 +193,7 @@ def generate_launch_description():
                 ]), '.urdf.xacro ',
             'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
             'arm_side:=', LaunchConfiguration('arm_side'), ' ',
+            'use_fake_hardware:=', LaunchConfiguration('use_fake_hardware'), ' ',
             ])
         )
     )
