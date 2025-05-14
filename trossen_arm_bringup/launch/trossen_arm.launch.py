@@ -119,7 +119,7 @@ def launch_setup(context, *args, **kwargs):
             PathJoinSubstitution([
                 FindPackageShare('trossen_arm_description'),
                 'launch',
-                'description.launch.py'
+                'display.launch.py'
             ]),
         ),
         launch_arguments={
