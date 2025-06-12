@@ -214,8 +214,10 @@ def launch_setup(context, *args, **kwargs):
         package='controller_manager',
         executable='ros2_control_node',
         parameters=[
-            robot_description,
             controllers_filepath,
+        ],
+        remappings=[
+            ("/controller_manager/robot_description", "/robot_description"),
         ],
         output={'both': 'screen'},
     )
