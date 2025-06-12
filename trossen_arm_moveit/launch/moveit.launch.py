@@ -50,6 +50,7 @@ from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
 import yaml
+# from moveit_configs_utils import MoveItConfigsBuilder
 
 
 def load_yaml(package_name, file_path):
@@ -76,7 +77,7 @@ def launch_setup(context, *args, **kwargs):
     # rviz_frame_launch_arg = LaunchConfiguration('rviz_frame')
     rviz_config_file_launch_arg = LaunchConfiguration('rviz_config_file')
     # world_filepath_launch_arg = LaunchConfiguration('world_filepath')
-    use_fake_hardware_launch_arg = LaunchConfiguration('use_fake_hardware')
+    ros2_control_hardware_type_launch_arg = LaunchConfiguration('ros2_control_hardware_type')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     robot_description_parameter = ParameterValue(robot_description_launch_arg, value_type=str)
 
@@ -121,21 +122,9 @@ def launch_setup(context, *args, **kwargs):
     )
     ompl_planning_pipeline_config['move_group'].update(ompl_planning_pipeline_yaml_file)
 
-    moveit_simple_controllers_yaml = load_yaml(
+    controllers_config = load_yaml(
         'trossen_arm_moveit', 'config/moveit_controllers.yaml'
     )
-
-    # moveit_simple_controllers_yaml = load_yaml(
-    #     'trossen_arm_moveit', 'config/wxai_controllers.yaml'
-    # )
-
-    # controllers_config = load_yaml(
-    #     'trossen_arm_moveit', 'config/moveit_controllers.yaml'
-    # )
-
-    # moveit_simple_controllers_yaml = load_yaml(
-    #     'trossen_arm_moveit', 'config/wxai_controllers.yaml'
-    # )
 
     config_joint_limits = load_yaml(
         'trossen_arm_moveit', 'config/wxai_joint_limits.yaml'
@@ -146,17 +135,13 @@ def launch_setup(context, *args, **kwargs):
     }
 
     moveit_controllers = {
-        'moveit_simple_controller_manager': moveit_simple_controllers_yaml,
-        # 'moveit_simple_controller_manager': controllers_config,
+        'moveit_simple_controller_manager': controllers_config,
         'moveit_controller_manager':
             'moveit_simple_controller_manager/MoveItSimpleControllerManager',
     }
 
     trajectory_execution_parameters = {
         'moveit_manage_controllers': True,
-        'trajectory_execution.allowed_execution_duration_scaling': 1.2,
-        'trajectory_execution.allowed_goal_duration_margin': 0.5,
-        'trajectory_execution.allowed_start_tolerance': 0.01,
     }
 
     planning_scene_monitor_parameters = {
@@ -165,6 +150,30 @@ def launch_setup(context, *args, **kwargs):
         'publish_state_updates': True,
         'publish_transforms_updates': True,
     }
+
+    # moveit_config = (
+    #     MoveItConfigsBuilder('trossen_arm_moveit')
+    #     .robot_description(robot_description)
+    #     .robot_description_semantic(robot_description_semantic)
+    #     .planning_scene_monitor(
+    #         publish_robot_description=True,
+    #         publish_robot_description_semantic=True,
+    #     )
+    #     # .trajectory_execution(file_path=)
+    # )
+
+    # static_tf_node = Node(
+    #     package='tf2_ros',
+    #     executable='static_transform_publisher',
+    #     name='static_tf_publisher',
+    #     arguments=[
+    #         '0.0', '0.0', '0.0',  # x, y, z
+    #         '0.0', '0.0', '0.0',  # roll, pitch, yaw
+    #         'base_link',  # parent frame
+    #         'world',  # child frame
+    #     ],
+    #     output={'both': 'log'},
+    # )
 
     move_group_node = Node(
         package='moveit_ros_move_group',
@@ -201,7 +210,7 @@ def launch_setup(context, *args, **kwargs):
             ompl_planning_pipeline_config,
             kinematics_config,
         ],
-        output={'both': 'log'},
+        output={'both': 'screen'},
     )
 
     controllers_filepath = PathJoinSubstitution([
@@ -303,10 +312,10 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            'use_fake_hardware',
-            default_value='false',
-            choices=('true', 'false'),
-            description='Use fake hardware interface instead of real hardware interface.'
+            'ros2_control_hardware_type',
+            default_value='real',
+            choices=('real', 'mock_components'),
+            description='Use real or mocked hardware interface.'
         )
     )
     declared_arguments.append(
@@ -332,7 +341,7 @@ def generate_launch_description():
                 ]), '.urdf.xacro ',
             'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
             'arm_side:=', LaunchConfiguration('arm_side'), ' ',
-            'use_fake_hardware:=', LaunchConfiguration('use_fake_hardware'), ' ',
+            'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'), ' ',
             ])
         )
     )

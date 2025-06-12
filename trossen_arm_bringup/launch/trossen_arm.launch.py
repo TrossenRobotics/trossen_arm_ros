@@ -175,10 +175,10 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            'use_fake_hardware',
-            default_value='false',
-            choices=('true', 'false'),
-            description='Use fake hardware interface instead of real hardware interface.'
+            'ros2_control_hardware_type',
+            default_value='real',
+            choices=('real', 'mock_components'),
+            description='Use real or mocked hardware interface.'
         )
     )
     declared_arguments.append(
@@ -193,7 +193,7 @@ def generate_launch_description():
                 ]), '.urdf.xacro ',
             'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
             'arm_side:=', LaunchConfiguration('arm_side'), ' ',
-            'use_fake_hardware:=', LaunchConfiguration('use_fake_hardware'), ' ',
+            'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'), ' ',
             ])
         )
     )
