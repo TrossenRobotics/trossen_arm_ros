@@ -53,10 +53,9 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
       "Required parameter 'robot_model' not specified.");
     return CallbackReturn::FAILURE;
   } catch (const std::invalid_argument & /*e*/) {
-    // TODO(lukeschmitt-tr): validate robot model
-    // RCLCPP_FATAL(
-    //   get_logger(),
-    //   "Invalid 'robot_model' value specified: '%s'.", robot_model);
+    RCLCPP_FATAL(
+      get_logger(),
+      "Invalid 'robot_model' value specified: '%s'.", robot_model_);
     return CallbackReturn::FAILURE;
   }
 
@@ -72,19 +71,6 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
       "Parameter 'ip_address' not specified. Defaulting to '%s'.",
       DRIVER_IP_ADDRESS_DEFAULT.c_str());
     driver_ip_address_ = DRIVER_IP_ADDRESS_DEFAULT;
-  }
-
-  try {
-    update_period_ = std::stof(info.hardware_parameters.at("update_period"));
-    RCLCPP_INFO(
-      get_logger(),
-      "Parameter 'update_period' set to '%f'.",
-      update_period_);
-  } catch (const std::out_of_range & /*e*/) {
-    RCLCPP_WARN(
-      get_logger(),
-      "Parameter 'update_period' not specified. Defaulting to '%f'.",
-      update_period_);
   }
 
   joint_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
@@ -116,7 +102,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     }
 
     // Each joint has 3 state interfaces: position, velocity, effort (in that order)
-    // Expect three state interfaces
+    // Expect exactly three state interfaces
     if (joint.state_interfaces.size() != 3) {
       RCLCPP_ERROR(
         get_logger(),
@@ -209,6 +195,7 @@ TrossenArmHardwareInterface::export_command_interfaces()
 CallbackReturn
 TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*previous_state*/)
 {
+  RCLCPP_INFO(get_logger(), "Configuring the Trossen Arm Driver...");
   try {
     arm_driver_ = std::make_unique<TrossenArmDriver>();
   } catch (const std::exception & e) {
@@ -283,38 +270,14 @@ TrossenArmHardwareInterface::read(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // Get joint positions
-  auto positions = arm_driver_->get_positions();
-
   // Copy joint positions
-  joint_positions_.clear();
-  joint_positions_.reserve(positions.size());
-  for (const auto & pos : positions) {
-    joint_positions_.push_back(static_cast<double>(pos));
-  }
-  // joint_positions_.push_back(-joint_positions_.back());
+  joint_positions_ = arm_driver_->get_all_positions();
 
   // Get joint velocities
-  auto velocities = arm_driver_->get_velocities();
-
-  // Copy joint velocities
-  joint_velocities_.clear();
-  joint_velocities_.reserve(velocities.size());
-  for (const auto & velocity : velocities) {
-    joint_velocities_.push_back(static_cast<double>(velocity));
-  }
-  // joint_velocities_.push_back(-joint_velocities_.back());
+  joint_velocities_ = arm_driver_->get_all_velocities();
 
   // Get joint efforts
-  auto efforts = arm_driver_->get_external_efforts();
-
-  // Copy joint efforts
-  joint_efforts_.clear();
-  joint_efforts_.reserve(efforts.size());
-  for (const auto & effort : efforts) {
-    joint_efforts_.push_back(static_cast<double>(effort));
-  }
-  // joint_efforts_.push_back(-joint_efforts_.back());
+  joint_efforts_ = arm_driver_->get_all_efforts();
 
   return return_type::OK;
 }
@@ -326,24 +289,19 @@ TrossenArmHardwareInterface::write(
 {
   // If first time writing to the hardware, set all commands to the current positions
   if (first_update_) {
-    joint_position_commands_ = joint_positions_;
-    first_update_ = false;
     RCLCPP_DEBUG(
       get_logger(),
       "First write update. Setting joint position commands to current positions.");
+    joint_position_commands_ = joint_positions_;
+    first_update_ = false;
   }
 
-  auto position_commands = std::vector<float>(joint_positions_.size(), 0.0);
-
-  // Copy joint position commands
-  for (size_t i = 0; i < joint_positions_.size(); i++) {
-    position_commands[i] = static_cast<float>(joint_position_commands_[i]);
-  }
+  auto position_commands = joint_position_commands_;
 
   // Validate that we are not sending NaN or INF values to the driver
   if (std::any_of(
       position_commands.begin(), position_commands.end(),
-      [this](float position) {
+      [this](double position) {
         return std::isnan(position) || std::isinf(position);
       }))
   {
@@ -353,7 +311,7 @@ TrossenArmHardwareInterface::write(
     return return_type::ERROR;
   }
 
-  // arm_driver_->set_all_positions(position_commands, update_period_, false);
+  arm_driver_->set_all_positions(position_commands, 0.0, false);
 
   return return_type::OK;
 }
