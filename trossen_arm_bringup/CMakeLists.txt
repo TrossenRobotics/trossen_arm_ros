@@ -1,16 +1,14 @@
-cmake_minimum_required(VERSION 3.5)
-project(trossen_arm_description)
+cmake_minimum_required(VERSION 3.10.0)
+project(trossen_arm_bringup)
 
 find_package(ament_cmake REQUIRED)
 
 install(
   DIRECTORY
+    config
     launch
-    meshes
-    rviz
-    urdf
   DESTINATION
-    share/${PROJECT_NAME}/
+    share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

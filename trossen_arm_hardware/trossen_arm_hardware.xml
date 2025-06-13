@@ -1,0 +1,7 @@
+<library path="trossen_arm_hardware">
+  <class name="trossen_arm_hardware/TrossenArmHardwareInterface"
+         type="trossen_arm_hardware::TrossenArmHardwareInterface"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>The trossen_arm_hardware TrossenArmHardwareInterface using a system hardware interface-type.</description>
+  </class>
+</library>

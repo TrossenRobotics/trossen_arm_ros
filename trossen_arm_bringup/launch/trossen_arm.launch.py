@@ -29,9 +29,16 @@
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
+    IncludeLaunchDescription,
     OpaqueFunction,
+    RegisterEventHandler,
 )
-from launch.conditions import IfCondition
+from launch.event_handlers import (
+    OnProcessStart,
+)
+from launch.launch_description_sources import (
+    PythonLaunchDescriptionSource,
+)
 from launch.substitutions import (
     Command,
     FindExecutable,
@@ -39,55 +46,101 @@ from launch.substitutions import (
     PathJoinSubstitution,
 )
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import (
+    ParameterFile,
+)
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.parameter_descriptions import ParameterValue
+
 
 def launch_setup(context, *args, **kwargs):
-    use_rviz_launch_arg = LaunchConfiguration('use_rviz')
-    use_joint_pub_launch_arg = LaunchConfiguration('use_joint_pub')
-    use_joint_pub_gui_launch_arg = LaunchConfiguration('use_joint_pub_gui')
-    rvizconfig_launch_arg = LaunchConfiguration('rvizconfig')
+
+    robot_model_launch_arg = LaunchConfiguration('robot_model')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
 
-    robot_state_publisher_node = Node(
-        package='robot_state_publisher',
-        executable='robot_state_publisher',
-        parameters=[{
-            'robot_description': ParameterValue(robot_description_launch_arg, value_type=str),
-        }],
-        output={'both': 'screen'},
+    ros2_control_controllers_config_parameter_file = ParameterFile(
+        param_file=PathJoinSubstitution([
+            FindPackageShare('trossen_arm_bringup'),
+            'config',
+            'controllers.yaml',
+        ]),
+        allow_substs=True,
     )
 
-    joint_state_publisher_node = Node(
-        condition=IfCondition(use_joint_pub_launch_arg),
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        output={'both': 'screen'},
-    )
-
-    joint_state_publisher_gui_node = Node(
-        condition=IfCondition(use_joint_pub_gui_launch_arg),
-        package='joint_state_publisher_gui',
-        executable='joint_state_publisher_gui',
-        output={'both': 'screen'},
-    )
-
-    rviz2_node = Node(
-        condition=IfCondition(use_rviz_launch_arg),
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        arguments=[
-            '-d', rvizconfig_launch_arg,
+    controller_manager_node = Node(
+        package='controller_manager',
+        executable='ros2_control_node',
+        parameters=[
+            ros2_control_controllers_config_parameter_file,
+        ],
+        remappings=[
+            ('~/robot_description', '/robot_description'),
         ],
         output={'both': 'screen'},
     )
 
+    spawn_arm_controller_node = Node(
+        name='arm_controller_spawner',
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            '--controller-manager', '/controller_manager',
+            'arm_controller',
+        ],
+        output={'both': 'screen'},
+    )
+
+    spawn_gripper_controller_node = Node(
+        name='gripper_controller_spawner',
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            '--controller-manager', '/controller_manager',
+            'gripper_controller',
+        ],
+        output={'both': 'screen'},
+    )
+
+    spawn_joint_state_broadcaster_node = Node(
+        name='joint_state_broadcaster_spawner',
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            '--controller-manager', '/controller_manager',
+            'joint_state_broadcaster',
+        ],
+        remappings=[
+            ('joint_states', '/joint_states'),
+        ],
+        output={'both': 'screen'},
+    )
+
+    description_launch_include = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            PathJoinSubstitution([
+                FindPackageShare('trossen_arm_description'),
+                'launch',
+                'display.launch.py'
+            ]),
+        ),
+        launch_arguments={
+            'robot_model': robot_model_launch_arg,
+            'robot_description': robot_description_launch_arg,
+        }.items(),
+    )
+
     return [
-        robot_state_publisher_node,
-        joint_state_publisher_node,
-        joint_state_publisher_gui_node,
-        rviz2_node,
+        controller_manager_node,
+        description_launch_include,
+        RegisterEventHandler(
+            OnProcessStart(
+                target_action=controller_manager_node,
+                on_start=[
+                    spawn_joint_state_broadcaster_node,
+                    spawn_arm_controller_node,
+                    # spawn_gripper_controller_node,
+                ]
+            )
+        ),
     ]
 
 
@@ -97,63 +150,37 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_model',
             default_value='wxai',
-            choices=(
-                'wxai'
-            ),
+            choices=('wxai'),
+            description='model codename of the Trossen Arm such as `wxai`.'
         )
     )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'use_rviz',
-            default_value='true',
-            choices=('true', 'false'),
-            description='launches RViz if set to `true`.',
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'use_joint_pub',
-            default_value='false',
-            choices=('true', 'false'),
-            description='launches the joint_state_publisher node.',
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'use_joint_pub_gui',
-            default_value='true',
-            choices=('true', 'false'),
-            description='launches the joint_state_publisher GUI.',
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'rvizconfig',
-            default_value=PathJoinSubstitution([
-                FindPackageShare('trossen_arm_description'),
-                'rviz',
-                'trossen_arm_description.rviz',
-            ]),
-            description='file path to the config file RViz should load.',
-        )
-    )
-
     declared_arguments.append(
         DeclareLaunchArgument(
             'arm_variant',
             default_value='base',
             choices=('base', 'leader', 'follower'),
+            description='End effector variant of the Trossen Arm.',
         )
     )
-
     declared_arguments.append(
         DeclareLaunchArgument(
             'arm_side',
             default_value='none',
             choices=('none', 'left', 'right'),
+            description=(
+                'Side of the Trossen Arm. Note that only the wxai follower variant has a left '
+                'and right side.'
+            ),
         )
     )
-
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'ros2_control_hardware_type',
+            default_value='real',
+            choices=('real', 'mock_components'),
+            description='Use real or mocked hardware interface.'
+        )
+    )
     declared_arguments.append(
         DeclareLaunchArgument(
             'robot_description',
@@ -166,6 +193,7 @@ def generate_launch_description():
                 ]), '.urdf.xacro ',
             'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
             'arm_side:=', LaunchConfiguration('arm_side'), ' ',
+            'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'), ' ',
             ])
         )
     )
