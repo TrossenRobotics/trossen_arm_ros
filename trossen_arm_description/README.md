@@ -1,1 +1,0 @@
-# Trossen Arm Description
