@@ -77,16 +77,16 @@ def launch_setup(context, *args, **kwargs):
     # rviz_frame_launch_arg = LaunchConfiguration('rviz_frame')
     rviz_config_file_launch_arg = LaunchConfiguration('rviz_config_file')
     # world_filepath_launch_arg = LaunchConfiguration('world_filepath')
-    ros2_control_hardware_type_launch_arg = LaunchConfiguration('ros2_control_hardware_type')
+    # ros2_control_hardware_type_launch_arg = LaunchConfiguration('ros2_control_hardware_type')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     robot_description_parameter = ParameterValue(robot_description_launch_arg, value_type=str)
 
     robot_description = {'robot_description': robot_description_parameter}
 
-    config_path = PathJoinSubstitution([
-        FindPackageShare('trossen_arm_moveit'),
-        'config',
-    ])
+    # config_path = PathJoinSubstitution([
+    #     FindPackageShare('trossen_arm_moveit'),
+    #     'config',
+    # ])
 
     robot_description_semantic = {
         'robot_description_semantic':
@@ -210,7 +210,7 @@ def launch_setup(context, *args, **kwargs):
             ompl_planning_pipeline_config,
             kinematics_config,
         ],
-        output={'both': 'screen'},
+        output={'both': 'log'},
     )
 
     controllers_filepath = PathJoinSubstitution([
@@ -267,7 +267,7 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{
             'robot_description': robot_description_parameter,
         }],
-        output={'both': 'screen'},
+        output={'both': 'log'},
     )
 
     return [
