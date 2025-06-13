@@ -55,7 +55,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
   } catch (const std::invalid_argument & /*e*/) {
     RCLCPP_FATAL(
       get_logger(),
-      "Invalid 'robot_model' value specified: '%s'.", robot_model_);
+      "Invalid 'robot_model' value specified: '%d'.", static_cast<int>(robot_model_));
     return CallbackReturn::FAILURE;
   }
 
