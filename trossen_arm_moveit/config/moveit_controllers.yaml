@@ -21,7 +21,7 @@ arm_controller:
     - joint_5
 
 gripper_controller:
-  action_ns: gripper_action
+  action_ns: gripper_cmd
   type: GripperCommand
   allow_nonzero_velocity_at_trajectory_end: false
   default: true
