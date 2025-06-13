@@ -65,28 +65,11 @@ def load_yaml(package_name, file_path):
 
 
 def launch_setup(context, *args, **kwargs):
-
-    robot_model_launch_arg = LaunchConfiguration('robot_model')
-    # robot_name_launch_arg = LaunchConfiguration('robot_name')
-    # base_link_frame_launch_arg = LaunchConfiguration('base_link_frame')
-    # show_ar_tag_launch_arg = LaunchConfiguration('show_ar_tag')
-    # use_world_frame_launch_arg = LaunchConfiguration('use_world_frame')
-    # external_urdf_loc_launch_arg = LaunchConfiguration('external_urdf_loc')
-    # mode_configs_launch_arg = LaunchConfiguration('mode_configs')
-    # use_moveit_rviz_launch_arg = LaunchConfiguration('use_moveit_rviz')
-    # rviz_frame_launch_arg = LaunchConfiguration('rviz_frame')
     rviz_config_file_launch_arg = LaunchConfiguration('rviz_config_file')
-    # world_filepath_launch_arg = LaunchConfiguration('world_filepath')
-    # ros2_control_hardware_type_launch_arg = LaunchConfiguration('ros2_control_hardware_type')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
     robot_description_parameter = ParameterValue(robot_description_launch_arg, value_type=str)
 
     robot_description = {'robot_description': robot_description_parameter}
-
-    # config_path = PathJoinSubstitution([
-    #     FindPackageShare('trossen_arm_moveit'),
-    #     'config',
-    # ])
 
     robot_description_semantic = {
         'robot_description_semantic':
@@ -151,40 +134,10 @@ def launch_setup(context, *args, **kwargs):
         'publish_transforms_updates': True,
     }
 
-    # moveit_config = (
-    #     MoveItConfigsBuilder('trossen_arm_moveit')
-    #     .robot_description(robot_description)
-    #     .robot_description_semantic(robot_description_semantic)
-    #     .planning_scene_monitor(
-    #         publish_robot_description=True,
-    #         publish_robot_description_semantic=True,
-    #     )
-    #     # .trajectory_execution(file_path=)
-    # )
-
-    # static_tf_node = Node(
-    #     package='tf2_ros',
-    #     executable='static_transform_publisher',
-    #     name='static_tf_publisher',
-    #     arguments=[
-    #         '0.0', '0.0', '0.0',  # x, y, z
-    #         '0.0', '0.0', '0.0',  # roll, pitch, yaw
-    #         'base_link',  # parent frame
-    #         'world',  # child frame
-    #     ],
-    #     output={'both': 'log'},
-    # )
-
     move_group_node = Node(
         package='moveit_ros_move_group',
         executable='move_group',
         parameters=[
-            # {
-            #     'planning_scene_monitor_options': {
-            #         'robot_description':
-            #             'robot_description',
-            #     },
-            # },
             robot_description,
             robot_description_semantic,
             kinematics_config,
