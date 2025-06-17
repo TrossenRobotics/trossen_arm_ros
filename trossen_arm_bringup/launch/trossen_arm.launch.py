@@ -137,7 +137,7 @@ def launch_setup(context, *args, **kwargs):
                 on_start=[
                     spawn_joint_state_broadcaster_node,
                     spawn_arm_controller_node,
-                    # spawn_gripper_controller_node,
+                    spawn_gripper_controller_node,
                 ]
             )
         ),
@@ -185,15 +185,15 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_description',
             default_value=Command([
-            FindExecutable(name='xacro'), ' ',
-            PathJoinSubstitution([
-                FindPackageShare('trossen_arm_description'),
-                'urdf',
-                LaunchConfiguration('robot_model'),
-                ]), '.urdf.xacro ',
-            'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
-            'arm_side:=', LaunchConfiguration('arm_side'), ' ',
-            'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'), ' ',
+                FindExecutable(name='xacro'), ' ',
+                PathJoinSubstitution([
+                    FindPackageShare('trossen_arm_description'),
+                    'urdf',
+                    LaunchConfiguration('robot_model'),
+                    ]), '.urdf.xacro ',
+                'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
+                'arm_side:=', LaunchConfiguration('arm_side'), ' ',
+                'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'),
             ])
         )
     )
