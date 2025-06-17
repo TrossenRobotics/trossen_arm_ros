@@ -26,126 +26,77 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import os
-
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
-    IncludeLaunchDescription,
     OpaqueFunction,
-    LogInfo,
 )
-from launch.conditions import IfCondition, LaunchConfigurationEquals, UnlessCondition
-from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import (
     Command,
     FindExecutable,
     LaunchConfiguration,
     PathJoinSubstitution,
-    PythonExpression,
-    TextSubstitution,
 )
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
-import yaml
-# from moveit_configs_utils import MoveItConfigsBuilder
-
-
-def load_yaml(package_name, file_path):
-    package_path = get_package_share_directory(package_name)
-    absolute_file_path = os.path.join(package_path, file_path)
-
-    try:
-        with open(absolute_file_path, 'r') as file:
-            return yaml.safe_load(file)
-    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
-        return None
+from moveit_configs_utils import MoveItConfigsBuilder
 
 
 def launch_setup(context, *args, **kwargs):
     rviz_config_file_launch_arg = LaunchConfiguration('rviz_config_file')
-    robot_description_launch_arg = LaunchConfiguration('robot_description')
-    robot_description_parameter = ParameterValue(robot_description_launch_arg, value_type=str)
 
-    robot_description = {'robot_description': robot_description_parameter}
-
-    robot_description_semantic = {
-        'robot_description_semantic':
-            ParameterValue(
-                Command([
-                    FindExecutable(name='xacro'), ' ', PathJoinSubstitution([
-                        FindPackageShare('trossen_arm_moveit'),
-                        'config',
-                        'wxai.srdf',
-                    ]),
-                ]),
-                value_type=str
-            ),
-    }
-
-    kinematics_config = load_yaml('trossen_arm_moveit', 'config/kinematics.yaml')
-
-    ompl_planning_pipeline_config = {
-        'move_group': {
-            'planning_plugin': 'ompl_interface/OMPLPlanner',
-            'request_adapters':
-                'default_planner_request_adapters/AddTimeOptimalParameterization '
-                'default_planner_request_adapters/FixWorkspaceBounds '
-                'default_planner_request_adapters/FixStartStateBounds '
-                'default_planner_request_adapters/FixStartStateCollision '
-                'default_planner_request_adapters/FixStartStatePathConstraints',
-            'start_state_max_bounds_error': 0.1,
-        }
-    }
-
-    ompl_planning_pipeline_yaml_file = load_yaml(
-        'trossen_arm_moveit', 'config/ompl_planning.yaml'
+    moveit_configs = (
+        MoveItConfigsBuilder(
+            robot_name='wxai',
+            package_name='trossen_arm_moveit',
+        )
+        .robot_description(
+            file_path=PathJoinSubstitution([
+                FindPackageShare('trossen_arm_description'),
+                'urdf',
+                'wxai.urdf.xacro',
+            ]).perform(context),
+            mappings={
+                'arm_variant': LaunchConfiguration('arm_variant'),
+                'arm_side': LaunchConfiguration('arm_side'),
+                'ros2_control_hardware_type': LaunchConfiguration('ros2_control_hardware_type'),
+            }
+        )
+        .robot_description_semantic(
+            file_path='config/wxai.srdf',
+            mappings={},
+        )
+        .planning_scene_monitor(
+            publish_geometry_updates=True,
+            publish_state_updates=True,
+            publish_transforms_updates=True,
+            publish_planning_scene=True,
+        )
+        .trajectory_execution(
+            file_path='config/moveit_controllers.yaml',
+            moveit_manage_controllers=True,
+        )
+        .planning_pipelines(
+            default_planning_pipeline='ompl',
+            pipelines=[
+                'ompl',
+            ],
+        )
+        .robot_description_kinematics(
+            file_path='config/kinematics.yaml',
+        )
+        .joint_limits(
+            file_path='config/wxai_joint_limits.yaml',
+        )
+        .to_moveit_configs()
     )
-    ompl_planning_pipeline_config['move_group'].update(ompl_planning_pipeline_yaml_file)
-
-    controllers_config = load_yaml(
-        'trossen_arm_moveit', 'config/moveit_controllers.yaml'
-    )
-
-    config_joint_limits = load_yaml(
-        'trossen_arm_moveit', 'config/wxai_joint_limits.yaml'
-    )
-
-    joint_limits = {
-        'robot_description_planning': config_joint_limits,
-    }
-
-    moveit_controllers = {
-        'moveit_simple_controller_manager': controllers_config,
-        'moveit_controller_manager':
-            'moveit_simple_controller_manager/MoveItSimpleControllerManager',
-    }
-
-    trajectory_execution_parameters = {
-        'moveit_manage_controllers': True,
-    }
-
-    planning_scene_monitor_parameters = {
-        'publish_planning_scene': True,
-        'publish_geometry_updates': True,
-        'publish_state_updates': True,
-        'publish_transforms_updates': True,
-    }
 
     move_group_node = Node(
         package='moveit_ros_move_group',
         executable='move_group',
         parameters=[
-            robot_description,
-            robot_description_semantic,
-            kinematics_config,
-            ompl_planning_pipeline_config,
-            trajectory_execution_parameters,
-            moveit_controllers,
-            planning_scene_monitor_parameters,
-            joint_limits,
+            moveit_configs.to_dict(),
         ],
         output={'both': 'screen'},
     )
@@ -158,15 +109,16 @@ def launch_setup(context, *args, **kwargs):
             '-d', rviz_config_file_launch_arg,
         ],
         parameters=[
-            robot_description,
-            robot_description_semantic,
-            ompl_planning_pipeline_config,
-            kinematics_config,
+            moveit_configs.robot_description,
+            moveit_configs.robot_description_semantic,
+            moveit_configs.planning_pipelines,
+            moveit_configs.robot_description_kinematics,
+            moveit_configs.joint_limits,
         ],
         output={'both': 'log'},
     )
 
-    controllers_filepath = PathJoinSubstitution([
+    ros2_controllers_filepath = PathJoinSubstitution([
         FindPackageShare('trossen_arm_moveit'),
         'config',
         'wxai_controllers.yaml',
@@ -176,7 +128,7 @@ def launch_setup(context, *args, **kwargs):
         package='controller_manager',
         executable='ros2_control_node',
         parameters=[
-            controllers_filepath,
+            ros2_controllers_filepath,
         ],
         remappings=[
             ("/controller_manager/robot_description", "/robot_description"),
@@ -184,53 +136,39 @@ def launch_setup(context, *args, **kwargs):
         output={'both': 'screen'},
     )
 
-    spawn_arm_controller_node = Node(
-        name='arm_controller_spawner',
-        package='controller_manager',
-        executable='spawner',
-        arguments=[
-            'arm_controller',
-        ],
-        output={'both': 'screen'},
-    )
-
-    spawn_gripper_controller_node = Node(
-        name='gripper_controller_spawner',
-        package='controller_manager',
-        executable='spawner',
-        arguments=[
-            'gripper_controller',
-        ],
-        output={'both': 'screen'},
-    )
-
-    spawn_joint_state_broadcaster_node = Node(
-        name='joint_state_broadcaster_spawner',
-        package='controller_manager',
-        executable='spawner',
-        arguments=[
-            'joint_state_broadcaster',
-        ],
-        output={'both': 'screen'},
-    )
-
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
-        parameters=[{
-            'robot_description': robot_description_parameter,
-        }],
+        parameters=[
+            moveit_configs.robot_description,
+        ],
         output={'both': 'log'},
     )
+
+    controller_spawner_nodes: list[Node] = []
+    for controller_name in [
+        'arm_controller',
+        'gripper_controller',
+        'joint_state_broadcaster',
+    ]:
+        controller_spawner_nodes.append(
+            Node(
+                name=f'{controller_name}_spawner',
+                package='controller_manager',
+                executable='spawner',
+                arguments=[
+                    controller_name,
+                ],
+                output={'both': 'screen'},
+            )
+        )
 
     return [
         move_group_node,
         moveit_rviz_node,
         controller_manager_node,
-        spawn_arm_controller_node,
-        spawn_gripper_controller_node,
-        spawn_joint_state_broadcaster_node,
         robot_state_publisher_node,
+        *controller_spawner_nodes,
     ]
 
 
