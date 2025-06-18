@@ -86,7 +86,7 @@ def launch_setup(context, *args, **kwargs):
             file_path='config/kinematics.yaml',
         )
         .joint_limits(
-            file_path='config/wxai_joint_limits.yaml',
+            file_path='config/joint_limits.yaml',
         )
         .to_moveit_configs()
     )
@@ -120,7 +120,7 @@ def launch_setup(context, *args, **kwargs):
     ros2_controllers_filepath = PathJoinSubstitution([
         FindPackageShare('trossen_arm_moveit'),
         'config',
-        'wxai_controllers.yaml',
+        'ros2_controllers.yaml',
     ])
 
     controller_manager_node = Node(
