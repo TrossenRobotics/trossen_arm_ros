@@ -46,8 +46,6 @@ namespace trossen_arm_hardware
 {
 
 static const std::string DRIVER_IP_ADDRESS_DEFAULT = "192.168.1.2";
-static const uint16_t DRIVER_PORT_DEFAULT = 50000;
-static const uint32_t DRIVER_TIMEOUT_US_DEFAULT = 2000;
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -91,10 +89,6 @@ protected:
 
   std::string driver_ip_address_{DRIVER_IP_ADDRESS_DEFAULT};
 
-  uint16_t driver_port_{DRIVER_PORT_DEFAULT};
-
-  uint32_t driver_timeout_us_{DRIVER_TIMEOUT_US_DEFAULT};
-
   // Joint positions in radians
   std::vector<double> joint_positions_;
 
@@ -109,6 +103,14 @@ protected:
 
   // Flag to indicate the first read/write update
   bool first_update_{true};
+
+  const std::string RIGHT_CARRIAGE_JOINT_NAME_ = "right_carriage_joint";
+  const size_t COUNT_COMMAND_INTERFACES_ = 1;  // position
+  const size_t INDEX_COMMAND_INTERFACE_POSITION_ = 0;
+  const size_t COUNT_STATE_INTERFACES_ = 3;  // position, velocity, effort
+  const size_t INDEX_STATE_INTERFACE_POSITION_ = 0;
+  const size_t INDEX_STATE_INTERFACE_VELOCITY_ = 1;
+  const size_t INDEX_STATE_INTERFACE_EFFORT_ = 2;
 
   // Logger
   static rclcpp::Logger get_logger() {

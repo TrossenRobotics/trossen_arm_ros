@@ -40,7 +40,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     return CallbackReturn::ERROR;
   }
 
-  // Get robot model, ip
+  // Get robot model
   try {
     robot_model_ = trossen_arm::Model(std::stoi(info.hardware_parameters.at("robot_model")));
     RCLCPP_INFO(
@@ -59,6 +59,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     return CallbackReturn::FAILURE;
   }
 
+  // Get robot IP address
   try {
     driver_ip_address_ = info.hardware_parameters.at("ip_address");
     RCLCPP_INFO(
@@ -73,74 +74,89 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     driver_ip_address_ = DRIVER_IP_ADDRESS_DEFAULT;
   }
 
+  // Joint state interfaces
   joint_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_velocities_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_efforts_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
 
-  joint_position_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
+  // Joint commands are one less than the number of joints from the robot description since the
+  // last joint is the gripper fingers, so we only need one command for the gripper
+  joint_position_commands_.resize(info_.joints.size() - 1, std::numeric_limits<double>::quiet_NaN());
 
   for (const auto & joint : info_.joints) {
-    // Only position command interfaces are supported for now
-    if (joint.command_interfaces.size() != 1) {
+    // Only a single command interface per joint is supported for now
+    if (joint.command_interfaces.size() != COUNT_COMMAND_INTERFACES_) {
+      // We will ignore the right carriage joint as it is not a joint that can be controlled
+      // and is just a mirror of the left carriage joint.
+      // if (joint.name == RIGHT_CARRIAGE_JOINT_NAME_) {
+      //   RCLCPP_DEBUG(
+      //     get_logger(),
+      //     "Skipping over joint '%s' as it is not controllable.",
+      //     joint.name.c_str());
+      //   continue;
+      // }
+
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has %zu command interfaces found. 1 expected.",
+        "Joint '%s' has %zu command interfaces found. %zu expected.",
         joint.name.c_str(),
-        joint.command_interfaces.size());
+        joint.command_interfaces.size(),
+        COUNT_COMMAND_INTERFACES_);
       return CallbackReturn::ERROR;
     }
 
-    // Only position expected
-    if (joint.command_interfaces.at(0).name != HW_IF_POSITION) {
+    // Only position command interface is expected
+    if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_POSITION_).name != HW_IF_POSITION) {
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' command interface found. '%s' expected",
         joint.name.c_str(),
-        joint.command_interfaces.at(0).name.c_str(),
+        joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_POSITION_).name.c_str(),
         HW_IF_POSITION);
       return CallbackReturn::ERROR;
     }
 
     // Each joint has 3 state interfaces: position, velocity, effort (in that order)
     // Expect exactly three state interfaces
-    if (joint.state_interfaces.size() != 3) {
+    if (joint.state_interfaces.size() != COUNT_STATE_INTERFACES_) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has %zu state interfaces found. 3 expected.",
+        "Joint '%s' has %zu state interfaces found. %zu expected.",
         joint.name.c_str(),
-        joint.state_interfaces.size());
+        joint.state_interfaces.size(),
+        COUNT_STATE_INTERFACES_);
       return CallbackReturn::ERROR;
     }
 
     // Position first
-    if (joint.state_interfaces.at(0).name != HW_IF_POSITION) {
+    if (joint.state_interfaces.at(INDEX_STATE_INTERFACE_POSITION_).name != HW_IF_POSITION) {
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' state interface found. '%s' expected",
         joint.name.c_str(),
-        joint.state_interfaces.at(0).name.c_str(),
+        joint.state_interfaces.at(INDEX_STATE_INTERFACE_POSITION_).name.c_str(),
         HW_IF_POSITION);
       return CallbackReturn::ERROR;
     }
 
     // Velocity second
-    if (joint.state_interfaces.at(1).name != HW_IF_VELOCITY) {
+    if (joint.state_interfaces.at(INDEX_STATE_INTERFACE_VELOCITY_).name != HW_IF_VELOCITY) {
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' state interface found. '%s' expected",
         joint.name.c_str(),
-        joint.state_interfaces.at(1).name.c_str(),
+        joint.state_interfaces.at(INDEX_STATE_INTERFACE_VELOCITY_).name.c_str(),
         HW_IF_VELOCITY);
       return CallbackReturn::ERROR;
     }
 
     // Effort third
-    if (joint.state_interfaces.at(2).name != HW_IF_EFFORT) {
+    if (joint.state_interfaces.at(INDEX_STATE_INTERFACE_EFFORT_).name != HW_IF_EFFORT) {
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' state interface found. '%s' expected",
         joint.name.c_str(),
-        joint.state_interfaces.at(2).name.c_str(),
+        joint.state_interfaces.at(INDEX_STATE_INTERFACE_EFFORT_).name.c_str(),
         HW_IF_EFFORT);
       return CallbackReturn::ERROR;
     }
@@ -174,6 +190,8 @@ TrossenArmHardwareInterface::export_state_interfaces()
         &joint_efforts_[i]));
   }
 
+  RCLCPP_INFO(get_logger(), "Has %zu state interfaces.", state_interfaces.size());
+
   return state_interfaces;
 }
 
@@ -182,6 +200,16 @@ TrossenArmHardwareInterface::export_command_interfaces()
 {
   std::vector<hardware_interface::CommandInterface> command_interfaces;
   for (size_t i = 0; i < info_.joints.size(); i++) {
+    // Skip the right carriage joint as it is not a joint that can be controlled and is just a
+    // mirror of the left carriage joint.
+    // if (info_.joints[i].name == RIGHT_CARRIAGE_JOINT_NAME_) {
+    //   RCLCPP_INFO(
+    //     get_logger(),
+    //     "Skipping over joint '%s' as it is not controllable.",
+    //     info_.joints[i].name.c_str());
+    //   continue;
+    // }
+
     // Position command interfaces
     command_interfaces.emplace_back(
       hardware_interface::CommandInterface(
@@ -189,6 +217,9 @@ TrossenArmHardwareInterface::export_command_interfaces()
         HW_IF_POSITION,
         &joint_position_commands_[i]));
   }
+
+  RCLCPP_INFO(get_logger(), "Has %zu command interfaces.", command_interfaces.size());
+
   return command_interfaces;
 }
 
@@ -217,7 +248,7 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
       robot_model_,
       trossen_arm::StandardEndEffector::wxai_v0_base,
       driver_ip_address_.c_str(),
-      true);  // TODO(lukeschmitt-tr): Make this configuration (or remove it)
+      true);
   } catch (const std::exception & e) {
     RCLCPP_FATAL(
       get_logger(),
@@ -227,8 +258,8 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
 
   RCLCPP_INFO(
     get_logger(),
-    "TrossenArmDriver configured with model %d, IP Address '%s', port '%d', timeout %dus.",
-    static_cast<int>(robot_model_), driver_ip_address_.c_str(), driver_port_, driver_timeout_us_);
+    "TrossenArmDriver configured with model %d, IP Address '%s'.",
+    static_cast<int>(robot_model_), driver_ip_address_.c_str());
 
   return CallbackReturn::SUCCESS;
 }
@@ -270,14 +301,21 @@ TrossenArmHardwareInterface::read(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // Copy joint positions
-  joint_positions_ = arm_driver_->get_all_positions();
+  // Read the joint positions, velocities, and efforts from the driver
 
-  // Get joint velocities
-  joint_velocities_ = arm_driver_->get_all_velocities();
+  // We set the last joint position, velocity, and effort to the same value as the second last
+  // joint as it is the right gripper joint which is just a mirror of the left gripper joint.
+  auto positions = arm_driver_->get_all_positions();
+  positions.push_back(positions.back());
+  joint_positions_ = positions;
 
-  // Get joint efforts
-  joint_efforts_ = arm_driver_->get_all_efforts();
+  auto velocities = arm_driver_->get_all_velocities();
+  velocities.push_back(velocities.back());
+  joint_velocities_ = velocities;
+
+  auto efforts = arm_driver_->get_all_efforts();
+  efforts.push_back(efforts.back());
+  joint_efforts_ = efforts;
 
   return return_type::OK;
 }
@@ -289,18 +327,17 @@ TrossenArmHardwareInterface::write(
 {
   // If first time writing to the hardware, set all commands to the current positions
   if (first_update_) {
-    RCLCPP_DEBUG(
+    RCLCPP_INFO(
       get_logger(),
       "First write update. Setting joint position commands to current positions.");
-    joint_position_commands_ = joint_positions_;
+    // Exclude the last joint (the right gripper joint) from the command
+    joint_position_commands_ = std::vector<double>(joint_positions_.begin(), joint_positions_.end() - 1);
     first_update_ = false;
   }
 
-  auto position_commands = joint_position_commands_;
-
   // Validate that we are not sending NaN or INF values to the driver
   if (std::any_of(
-      position_commands.begin(), position_commands.end(),
+      joint_position_commands_.begin(), joint_position_commands_.end(),
       [this](double position) {
         return std::isnan(position) || std::isinf(position);
       }))
@@ -311,7 +348,25 @@ TrossenArmHardwareInterface::write(
     return return_type::ERROR;
   }
 
-  arm_driver_->set_all_positions(position_commands, 0.0, false);
+  // std::string msg_commands = "Joint position commands: ";
+  // for (const auto command : joint_position_commands_) {
+  //   msg_commands += std::to_string(command) + " ";
+  // }
+  // RCLCPP_INFO(get_logger(), msg_commands.c_str());
+
+  // // Check that the commands do not match the current positions
+  // if (std::equal(
+  //     joint_position_commands_.begin(), joint_position_commands_.end(),
+  //     joint_positions_.begin(), joint_positions_.end() - 1))  // Exclude the last joint (right gripper)
+  // {
+  //   RCLCPP_INFO(
+  //     get_logger(),
+  //     "Joint position commands match current positions. No action taken.");
+  //   return return_type::OK;
+  // }
+
+  // Send the position commands to the driver
+  arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
 
   return return_type::OK;
 }
