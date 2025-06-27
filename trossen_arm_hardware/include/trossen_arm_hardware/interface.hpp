@@ -106,7 +106,6 @@ protected:
   // Flag to indicate the first read/write update
   bool first_update_{true};
 
-  const std::string RIGHT_CARRIAGE_JOINT_NAME_ = "right_carriage_joint";
   const size_t COUNT_COMMAND_INTERFACES_ = 1;  // position
   const size_t INDEX_COMMAND_INTERFACE_POSITION_ = 0;
   const size_t COUNT_STATE_INTERFACES_ = 3;  // position, velocity, effort
