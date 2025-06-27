@@ -38,11 +38,10 @@
 #include "hardware_interface/types/hardware_interface_return_values.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "hardware_interface/types/lifecycle_state_names.hpp"
+#include "libtrossen_arm/trossen_arm.hpp"
 #include "rclcpp_lifecycle/state.hpp"
 #include "rclcpp/logger.hpp"
 #include "rclcpp/rclcpp.hpp"
-
-#include "libtrossen_arm/trossen_arm.hpp"
 
 namespace trossen_arm_hardware
 {

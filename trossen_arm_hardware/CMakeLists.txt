@@ -7,14 +7,12 @@ find_package(libtrossen_arm REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
-find_package(yaml-cpp REQUIRED)
 
 set(ROS_DEPENDENCIES
   hardware_interface
   pluginlib
   rclcpp
   rclcpp_lifecycle
-  yaml-cpp
 )
 
 include_directories(
@@ -31,7 +29,6 @@ ament_target_dependencies(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME}
   libtrossen_arm
-  yaml-cpp
 )
 
 pluginlib_export_plugin_description_file(hardware_interface ${PROJECT_NAME}.xml)
