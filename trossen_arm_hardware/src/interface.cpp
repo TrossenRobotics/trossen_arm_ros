@@ -293,7 +293,7 @@ TrossenArmHardwareInterface::read(
 return_type
 TrossenArmHardwareInterface::write(
   const rclcpp::Time & /*time*/,
-  const rclcpp::Duration & /*period*/)
+  const rclcpp::Duration & period)
 {
   // If first time writing to the hardware, set all commands to the current positions
   if (first_update_) {
@@ -317,7 +317,7 @@ TrossenArmHardwareInterface::write(
     return return_type::ERROR;
   }
 
-  arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
+  arm_driver_->set_all_positions(joint_position_commands_, period.seconds(), false);
 
   return return_type::OK;
 }
