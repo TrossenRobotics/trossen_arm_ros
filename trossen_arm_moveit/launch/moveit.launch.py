@@ -36,8 +36,6 @@ from launch.event_handlers import (
     OnProcessStart,
 )
 from launch.substitutions import (
-    Command,
-    FindExecutable,
     LaunchConfiguration,
     PathJoinSubstitution,
 )
@@ -136,7 +134,7 @@ def launch_setup(context, *args, **kwargs):
             ros2_controllers_filepath,
         ],
         remappings=[
-            ("/controller_manager/robot_description", "/robot_description"),
+            ('~/robot_description', '/robot_description'),
         ],
         output={'both': 'screen'},
     )
@@ -221,21 +219,5 @@ def generate_launch_description():
             description='Full path to the RVIZ config file to use.',
         )
     )
-    # declared_arguments.append(
-    #     DeclareLaunchArgument(
-    #         'robot_description',
-    #         default_value=Command([
-    #             FindExecutable(name='xacro'), ' ',
-    #             PathJoinSubstitution([
-    #                 FindPackageShare('trossen_arm_description'),
-    #                 'urdf',
-    #                 LaunchConfiguration('robot_model'),
-    #                 ]), '.urdf.xacro ',
-    #             'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
-    #             'arm_side:=', LaunchConfiguration('arm_side'), ' ',
-    #             'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'),
-    #         ])
-    #     )
-    # )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

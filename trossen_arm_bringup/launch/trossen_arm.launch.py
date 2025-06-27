@@ -78,41 +78,23 @@ def launch_setup(context, *args, **kwargs):
         output={'both': 'screen'},
     )
 
-    spawn_arm_controller_node = Node(
-        name='arm_controller_spawner',
-        package='controller_manager',
-        executable='spawner',
-        arguments=[
-            '--controller-manager', '/controller_manager',
-            'arm_controller',
-        ],
-        output={'both': 'screen'},
-    )
-
-    spawn_gripper_controller_node = Node(
-        name='gripper_controller_spawner',
-        package='controller_manager',
-        executable='spawner',
-        arguments=[
-            '--controller-manager', '/controller_manager',
-            'gripper_controller',
-        ],
-        output={'both': 'screen'},
-    )
-
-    spawn_joint_state_broadcaster_node = Node(
-        name='joint_state_broadcaster_spawner',
-        package='controller_manager',
-        executable='spawner',
-        arguments=[
-            '--controller-manager', '/controller_manager',
-            'joint_state_broadcaster',
-        ],
-        remappings=[
-            ('joint_states', '/joint_states'),
-        ],
-        output={'both': 'screen'},
-    )
+    controller_spawner_nodes: list[Node] = []
+    for controller_name in [
+        'arm_controller',
+        'gripper_controller',
+        'joint_state_broadcaster',
+    ]:
+        controller_spawner_nodes.append(
+            Node(
+                name=f'{controller_name}_spawner',
+                package='controller_manager',
+                executable='spawner',
+                arguments=[
+                    controller_name,
+                ],
+                output={'both': 'screen'},
+            )
+        )
 
     description_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -125,6 +107,7 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={
             'robot_model': robot_model_launch_arg,
             'robot_description': robot_description_launch_arg,
+            'use_joint_pub_gui': 'false',
         }.items(),
     )
 
@@ -135,9 +118,7 @@ def launch_setup(context, *args, **kwargs):
             OnProcessStart(
                 target_action=controller_manager_node,
                 on_start=[
-                    spawn_joint_state_broadcaster_node,
-                    spawn_arm_controller_node,
-                    spawn_gripper_controller_node,
+                    *controller_spawner_nodes,
                 ]
             )
         ),
