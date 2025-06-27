@@ -30,6 +30,10 @@ from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     OpaqueFunction,
+    RegisterEventHandler,
+)
+from launch.event_handlers import (
+    OnProcessStart,
 )
 from launch.substitutions import (
     Command,
@@ -58,7 +62,6 @@ def launch_setup(context, *args, **kwargs):
             ]).perform(context),
             mappings={
                 'arm_variant': LaunchConfiguration('arm_variant'),
-                'arm_side': LaunchConfiguration('arm_side'),
                 'ros2_control_hardware_type': LaunchConfiguration('ros2_control_hardware_type'),
             }
         )
@@ -87,6 +90,9 @@ def launch_setup(context, *args, **kwargs):
         )
         .joint_limits(
             file_path='config/joint_limits.yaml',
+        )
+        .sensors_3d(
+            file_path='config/sensors_3d.yaml',
         )
         .to_moveit_configs()
     )
@@ -167,7 +173,14 @@ def launch_setup(context, *args, **kwargs):
         moveit_rviz_node,
         controller_manager_node,
         robot_state_publisher_node,
-        *controller_spawner_nodes,
+        RegisterEventHandler(
+            OnProcessStart(
+                target_action=controller_manager_node,
+                on_start=[
+                    *controller_spawner_nodes,
+                ]
+            )
+        ),
     ]
 
 
@@ -185,19 +198,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'arm_variant',
             default_value='base',
-            choices=('base', 'leader', 'follower'),
+            choices=('base', 'leader'),
             description='End effector variant of the Trossen Arm.',
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'arm_side',
-            default_value='none',
-            choices=('none', 'left', 'right'),
-            description=(
-                'Side of the Trossen Arm. Note that only the wxai follower variant has a left '
-                'and right side.'
-            ),
         )
     )
     declared_arguments.append(
@@ -219,21 +221,21 @@ def generate_launch_description():
             description='Full path to the RVIZ config file to use.',
         )
     )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'robot_description',
-            default_value=Command([
-                FindExecutable(name='xacro'), ' ',
-                PathJoinSubstitution([
-                    FindPackageShare('trossen_arm_description'),
-                    'urdf',
-                    LaunchConfiguration('robot_model'),
-                    ]), '.urdf.xacro ',
-                'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
-                'arm_side:=', LaunchConfiguration('arm_side'), ' ',
-                'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'),
-            ])
-        )
-    )
+    # declared_arguments.append(
+    #     DeclareLaunchArgument(
+    #         'robot_description',
+    #         default_value=Command([
+    #             FindExecutable(name='xacro'), ' ',
+    #             PathJoinSubstitution([
+    #                 FindPackageShare('trossen_arm_description'),
+    #                 'urdf',
+    #                 LaunchConfiguration('robot_model'),
+    #                 ]), '.urdf.xacro ',
+    #             'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
+    #             'arm_side:=', LaunchConfiguration('arm_side'), ' ',
+    #             'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'),
+    #         ])
+    #     )
+    # )
 
     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

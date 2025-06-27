@@ -28,6 +28,6 @@ moveit_simple_controller_manager:
     type: GripperCommand
     allow_nonzero_velocity_at_trajectory_end: false
     default: true
+    max_effort: 5.0
     joints:
       - left_carriage_joint
-      - right_carriage_joint
