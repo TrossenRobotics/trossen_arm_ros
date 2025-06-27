@@ -79,23 +79,12 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
   joint_velocities_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_efforts_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
 
-  // Joint commands are one less than the number of joints from the robot description since the
-  // last joint is the gripper fingers, so we only need one command for the gripper
-  joint_position_commands_.resize(info_.joints.size() - 1, std::numeric_limits<double>::quiet_NaN());
+  // Joint command interfaces
+  joint_position_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
 
   for (const auto & joint : info_.joints) {
     // Only a single command interface per joint is supported for now
     if (joint.command_interfaces.size() != COUNT_COMMAND_INTERFACES_) {
-      // We will ignore the right carriage joint as it is not a joint that can be controlled
-      // and is just a mirror of the left carriage joint.
-      // if (joint.name == RIGHT_CARRIAGE_JOINT_NAME_) {
-      //   RCLCPP_DEBUG(
-      //     get_logger(),
-      //     "Skipping over joint '%s' as it is not controllable.",
-      //     joint.name.c_str());
-      //   continue;
-      // }
-
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has %zu command interfaces found. %zu expected.",
@@ -121,7 +110,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     if (joint.state_interfaces.size() != COUNT_STATE_INTERFACES_) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has %zu state interfaces found. %zu expected.",
+        "Joint '%s' has %zu state interfaces found. 3 expected.",
         joint.name.c_str(),
         joint.state_interfaces.size(),
         COUNT_STATE_INTERFACES_);
@@ -190,8 +179,6 @@ TrossenArmHardwareInterface::export_state_interfaces()
         &joint_efforts_[i]));
   }
 
-  RCLCPP_INFO(get_logger(), "Has %zu state interfaces.", state_interfaces.size());
-
   return state_interfaces;
 }
 
@@ -200,16 +187,6 @@ TrossenArmHardwareInterface::export_command_interfaces()
 {
   std::vector<hardware_interface::CommandInterface> command_interfaces;
   for (size_t i = 0; i < info_.joints.size(); i++) {
-    // Skip the right carriage joint as it is not a joint that can be controlled and is just a
-    // mirror of the left carriage joint.
-    // if (info_.joints[i].name == RIGHT_CARRIAGE_JOINT_NAME_) {
-    //   RCLCPP_INFO(
-    //     get_logger(),
-    //     "Skipping over joint '%s' as it is not controllable.",
-    //     info_.joints[i].name.c_str());
-    //   continue;
-    // }
-
     // Position command interfaces
     command_interfaces.emplace_back(
       hardware_interface::CommandInterface(
@@ -217,9 +194,6 @@ TrossenArmHardwareInterface::export_command_interfaces()
         HW_IF_POSITION,
         &joint_position_commands_[i]));
   }
-
-  RCLCPP_INFO(get_logger(), "Has %zu command interfaces.", command_interfaces.size());
-
   return command_interfaces;
 }
 
@@ -259,7 +233,8 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
   RCLCPP_INFO(
     get_logger(),
     "TrossenArmDriver configured with model %d, IP Address '%s'.",
-    static_cast<int>(robot_model_), driver_ip_address_.c_str());
+    static_cast<int>(robot_model_),
+    driver_ip_address_.c_str());
 
   return CallbackReturn::SUCCESS;
 }
@@ -301,21 +276,14 @@ TrossenArmHardwareInterface::read(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // Read the joint positions, velocities, and efforts from the driver
+  // Get joint positions
+  joint_positions_ = arm_driver_->get_all_positions();
 
-  // We set the last joint position, velocity, and effort to the same value as the second last
-  // joint as it is the right gripper joint which is just a mirror of the left gripper joint.
-  auto positions = arm_driver_->get_all_positions();
-  positions.push_back(positions.back());
-  joint_positions_ = positions;
+  // Get joint velocities
+  joint_velocities_ = arm_driver_->get_all_velocities();
 
-  auto velocities = arm_driver_->get_all_velocities();
-  velocities.push_back(velocities.back());
-  joint_velocities_ = velocities;
-
-  auto efforts = arm_driver_->get_all_efforts();
-  efforts.push_back(efforts.back());
-  joint_efforts_ = efforts;
+  // Get joint efforts
+  joint_efforts_ = arm_driver_->get_all_efforts();
 
   return return_type::OK;
 }
@@ -327,17 +295,18 @@ TrossenArmHardwareInterface::write(
 {
   // If first time writing to the hardware, set all commands to the current positions
   if (first_update_) {
-    RCLCPP_INFO(
+    RCLCPP_DEBUG(
       get_logger(),
       "First write update. Setting joint position commands to current positions.");
-    // Exclude the last joint (the right gripper joint) from the command
-    joint_position_commands_ = std::vector<double>(joint_positions_.begin(), joint_positions_.end() - 1);
+    joint_position_commands_ = joint_positions_;
     first_update_ = false;
   }
 
+  auto position_commands = joint_position_commands_;
+
   // Validate that we are not sending NaN or INF values to the driver
   if (std::any_of(
-      joint_position_commands_.begin(), joint_position_commands_.end(),
+      position_commands.begin(), position_commands.end(),
       [this](double position) {
         return std::isnan(position) || std::isinf(position);
       }))
@@ -348,25 +317,7 @@ TrossenArmHardwareInterface::write(
     return return_type::ERROR;
   }
 
-  // std::string msg_commands = "Joint position commands: ";
-  // for (const auto command : joint_position_commands_) {
-  //   msg_commands += std::to_string(command) + " ";
-  // }
-  // RCLCPP_INFO(get_logger(), msg_commands.c_str());
-
-  // // Check that the commands do not match the current positions
-  // if (std::equal(
-  //     joint_position_commands_.begin(), joint_position_commands_.end(),
-  //     joint_positions_.begin(), joint_positions_.end() - 1))  // Exclude the last joint (right gripper)
-  // {
-  //   RCLCPP_INFO(
-  //     get_logger(),
-  //     "Joint position commands match current positions. No action taken.");
-  //   return return_type::OK;
-  // }
-
-  // Send the position commands to the driver
-  arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
+  arm_driver_->set_all_positions(position_commands, 0.0, false);
 
   return return_type::OK;
 }
