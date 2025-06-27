@@ -276,14 +276,16 @@ TrossenArmHardwareInterface::read(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
+  auto const output = arm_driver_->get_robot_output();
+
   // Get joint positions
-  joint_positions_ = arm_driver_->get_all_positions();
+  joint_positions_ = output.joint.all.positions;
 
   // Get joint velocities
-  joint_velocities_ = arm_driver_->get_all_velocities();
+  joint_velocities_ = output.joint.all.velocities;
 
   // Get joint efforts
-  joint_efforts_ = arm_driver_->get_all_efforts();
+  joint_efforts_ = output.joint.all.efforts;
 
   return return_type::OK;
 }
