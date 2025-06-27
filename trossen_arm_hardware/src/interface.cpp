@@ -70,7 +70,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     RCLCPP_FATAL(
       get_logger(),
       "Parameter 'ip_address' not specified. Defaulting to '%s'.",
-      DRIVER_IP_ADDRESS_DEFAULT.c_str());
+      DRIVER_IP_ADDRESS_DEFAULT);
     driver_ip_address_ = DRIVER_IP_ADDRESS_DEFAULT;
   }
 
@@ -110,7 +110,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     if (joint.state_interfaces.size() != COUNT_STATE_INTERFACES_) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has %zu state interfaces found. 3 expected.",
+        "Joint '%s' has %zu state interfaces found. %zu expected.",
         joint.name.c_str(),
         joint.state_interfaces.size(),
         COUNT_STATE_INTERFACES_);

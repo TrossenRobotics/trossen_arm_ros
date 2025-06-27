@@ -30,6 +30,8 @@
 #define TROSSEN_ARM_HARDWARE__INTERFACE_HPP_
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "hardware_interface/hardware_info.hpp"
 #include "hardware_interface/system_interface.hpp"
@@ -45,7 +47,7 @@
 namespace trossen_arm_hardware
 {
 
-static const std::string DRIVER_IP_ADDRESS_DEFAULT = "192.168.1.2";
+static const char DRIVER_IP_ADDRESS_DEFAULT[] = "192.168.1.2";
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -113,9 +115,10 @@ protected:
   const size_t INDEX_STATE_INTERFACE_EFFORT_ = 2;
 
   // Logger
-  static rclcpp::Logger get_logger() {
+  static rclcpp::Logger get_logger()
+  {
     return rclcpp::get_logger("trossen_arm_hardware");
-  };
+  }
 };
 
 }  // namespace trossen_arm_hardware
