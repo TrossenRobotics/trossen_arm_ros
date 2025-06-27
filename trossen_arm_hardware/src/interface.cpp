@@ -304,11 +304,9 @@ TrossenArmHardwareInterface::write(
     first_update_ = false;
   }
 
-  auto position_commands = joint_position_commands_;
-
   // Validate that we are not sending NaN or INF values to the driver
   if (std::any_of(
-      position_commands.begin(), position_commands.end(),
+      joint_position_commands_.begin(), joint_position_commands_.end(),
       [this](double position) {
         return std::isnan(position) || std::isinf(position);
       }))
@@ -319,7 +317,7 @@ TrossenArmHardwareInterface::write(
     return return_type::ERROR;
   }
 
-  arm_driver_->set_all_positions(position_commands, 0.0, false);
+  arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
 
   return return_type::OK;
 }
