@@ -6,4 +6,4 @@ repositories:
   TrossenRobotics/trossen_arm:
     type: git
     url: https://github.com/TrossenRobotics/trossen_arm.git
-    version: v1.8.2
+    version: v1.8.3
