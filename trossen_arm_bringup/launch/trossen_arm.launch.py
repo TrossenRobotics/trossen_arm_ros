@@ -155,6 +155,13 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
+            'ip_address',
+            default_value='192.168.1.2',
+            description='IP address of the robot.',
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
             'ros2_control_hardware_type',
             default_value='real',
             choices=('real', 'mock_components'),
@@ -175,13 +182,6 @@ def generate_launch_description():
             default_value='true',
             choices=('true', 'false'),
             description='Use rviz.'
-        )
-    )
-    declared_arguments.append(
-        DeclareLaunchArgument(
-            'ip_address',
-            default_value='192.168.1.2',
-            description='IP address of robot',
         )
     )
     declared_arguments.append(
