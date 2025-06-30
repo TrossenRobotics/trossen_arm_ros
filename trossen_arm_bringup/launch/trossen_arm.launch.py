@@ -108,7 +108,7 @@ def launch_setup(context, *args, **kwargs):
             'robot_model': robot_model_launch_arg,
             'robot_description': robot_description_launch_arg,
             'use_joint_pub_gui': 'false',
-            'use_rviz': LaunchConfiguration('use_rviz')
+            'use_rviz': LaunchConfiguration('use_rviz'),
         }.items(),
     )
 
@@ -198,7 +198,7 @@ def generate_launch_description():
                 'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
                 'arm_side:=', LaunchConfiguration('arm_side'), ' ',
                 'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'), ' ',
-                'ip_address:=', LaunchConfiguration('ip_address'), 
+                'ip_address:=', LaunchConfiguration('ip_address'),
             ])
         )
     )
