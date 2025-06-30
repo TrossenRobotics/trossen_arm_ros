@@ -230,6 +230,9 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
     return CallbackReturn::ERROR;
   }
 
+  // Update the robot output
+  robot_output_ = arm_driver_->get_robot_output();
+
   RCLCPP_INFO(
     get_logger(),
     "TrossenArmDriver configured with model %d, IP Address '%s'.",
@@ -276,16 +279,16 @@ TrossenArmHardwareInterface::read(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  auto const output = arm_driver_->get_robot_output();
+  robot_output_ = arm_driver_->get_robot_output();
 
   // Get joint positions
-  joint_positions_ = output.joint.all.positions;
+  joint_positions_ = robot_output_.joint.all.positions;
 
   // Get joint velocities
-  joint_velocities_ = output.joint.all.velocities;
+  joint_velocities_ = robot_output_.joint.all.velocities;
 
   // Get joint efforts
-  joint_efforts_ = output.joint.all.efforts;
+  joint_efforts_ = robot_output_.joint.all.efforts;
 
   return return_type::OK;
 }

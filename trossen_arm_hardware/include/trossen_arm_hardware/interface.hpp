@@ -86,20 +86,25 @@ protected:
   // The driver for the robot
   std::unique_ptr<TrossenArmDriver> arm_driver_{nullptr};
 
+  // Model of the robot this hardware interface connects to
   trossen_arm::Model robot_model_;
 
+  // IP address of the driver this hardware interface connects to
   std::string driver_ip_address_{DRIVER_IP_ADDRESS_DEFAULT};
 
-  // Joint positions in radians
+  // Robot output structure to hold the robot's state
+  trossen_arm::RobotOutput robot_output_;
+
+  // Joint positions in radians for the arm and meters for the gripper
   std::vector<double> joint_positions_;
 
-  // Joint velocities in radians per second
+  // Joint velocities in radians per second for the arm and meters per second for the gripper
   std::vector<double> joint_velocities_;
 
-  // Joint efforts in Newton-meters
+  // Joint efforts in Newton-meters for the arm and Newtons for the gripper
   std::vector<double> joint_efforts_;
 
-  // Joint position commands in radians
+  // Joint position commands in radians for the arm and meters for the gripper
   std::vector<double> joint_position_commands_;
 
   // Flag to indicate the first read/write update
