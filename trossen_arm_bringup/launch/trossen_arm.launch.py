@@ -117,9 +117,7 @@ def launch_setup(context, *args, **kwargs):
         RegisterEventHandler(
             OnProcessStart(
                 target_action=controller_manager_node,
-                on_start=[
-                    *controller_spawner_nodes,
-                ]
+                on_start=controller_spawner_nodes,
             )
         ),
     ]
