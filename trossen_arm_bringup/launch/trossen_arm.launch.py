@@ -108,6 +108,7 @@ def launch_setup(context, *args, **kwargs):
             'robot_model': robot_model_launch_arg,
             'robot_description': robot_description_launch_arg,
             'use_joint_pub_gui': 'false',
+            'use_rviz': LaunchConfiguration('use_rviz'),
         }.items(),
     )
 
@@ -154,10 +155,33 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
+            'ip_address',
+            default_value='192.168.1.2',
+            description='IP address of the robot.',
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
             'ros2_control_hardware_type',
             default_value='real',
             choices=('real', 'mock_components'),
             description='Use real or mocked hardware interface.'
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_world_frame',
+            default_value='false',
+            choices=('true', 'false'),
+            description='Use world frame.'
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_rviz',
+            default_value='true',
+            choices=('true', 'false'),
+            description='Use rviz.'
         )
     )
     declared_arguments.append(
@@ -170,9 +194,11 @@ def generate_launch_description():
                     'urdf',
                     LaunchConfiguration('robot_model'),
                     ]), '.urdf.xacro ',
+                'use_world_frame:=', LaunchConfiguration('use_world_frame'), ' ',
                 'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
                 'arm_side:=', LaunchConfiguration('arm_side'), ' ',
-                'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'),
+                'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'), ' ',
+                'ip_address:=', LaunchConfiguration('ip_address'),
             ])
         )
     )

@@ -32,6 +32,7 @@ from launch.actions import (
     OpaqueFunction,
     RegisterEventHandler,
 )
+from launch.conditions import IfCondition
 from launch.event_handlers import (
     OnProcessStart,
 )
@@ -46,6 +47,7 @@ from moveit_configs_utils import MoveItConfigsBuilder
 
 def launch_setup(context, *args, **kwargs):
     rviz_config_file_launch_arg = LaunchConfiguration('rviz_config_file')
+    use_moveit_rviz_launch_arg = LaunchConfiguration('use_moveit_rviz')
 
     moveit_configs = (
         MoveItConfigsBuilder(
@@ -60,6 +62,7 @@ def launch_setup(context, *args, **kwargs):
             ]).perform(context),
             mappings={
                 'arm_variant': LaunchConfiguration('arm_variant'),
+                'ip_address': LaunchConfiguration('ip_address'),
                 'ros2_control_hardware_type': LaunchConfiguration('ros2_control_hardware_type'),
             }
         )
@@ -105,6 +108,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     moveit_rviz_node = Node(
+        condition=IfCondition(use_moveit_rviz_launch_arg),
         package='rviz2',
         executable='rviz2',
         name='rviz2',
@@ -200,10 +204,25 @@ def generate_launch_description():
     )
     declared_arguments.append(
         DeclareLaunchArgument(
+            'ip_address',
+            default_value='192.168.1.2',
+            description='IP address of the robot.',
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
             'ros2_control_hardware_type',
             default_value='real',
             choices=('real', 'mock_components'),
             description='Use real or mocked hardware interface.'
+        )
+    )
+    declared_arguments.append(
+        DeclareLaunchArgument(
+            'use_moveit_rviz',
+            default_value='true',
+            choices=('true', 'false'),
+            description="Launches RViz with MoveIt's RViz configuration.",
         )
     )
     declared_arguments.append(
