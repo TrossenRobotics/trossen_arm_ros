@@ -61,7 +61,6 @@ def launch_setup(context, *args, **kwargs):
             mappings={
                 'arm_variant': LaunchConfiguration('arm_variant'),
                 'ros2_control_hardware_type': LaunchConfiguration('ros2_control_hardware_type'),
-                'ip_address': LaunchConfiguration('ip_address', default='192.168.1.4'),
             }
         )
         .robot_description_semantic(
