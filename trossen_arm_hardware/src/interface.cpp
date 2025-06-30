@@ -338,6 +338,7 @@ TrossenArmHardwareInterface::on_deactivate(const rclcpp_lifecycle::State & /*pre
 CallbackReturn
 TrossenArmHardwareInterface::on_cleanup(const rclcpp_lifecycle::State & /*previous_state*/)
 {
+  robot_output_ = trossen_arm::RobotOutput();
   arm_driver_.reset();
 
   return CallbackReturn::SUCCESS;
