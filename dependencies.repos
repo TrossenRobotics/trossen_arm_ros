@@ -1,9 +1,9 @@
 repositories:
-  TrossenRobotics/trossen_arm_description:
+  trossen_arm_description:
     type: git
     url: https://github.com/TrossenRobotics/trossen_arm_description.git
     version: main
-  TrossenRobotics/trossen_arm:
+  trossen_arm:
     type: git
     url: https://github.com/TrossenRobotics/trossen_arm.git
     version: v1.8.3
