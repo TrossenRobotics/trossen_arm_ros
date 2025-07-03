@@ -33,12 +33,14 @@ position using the arm_controller's FollowJointTrajectory action interface.
 
 import math
 import time
+
 import rclpy
+from control_msgs.action import FollowJointTrajectory
 from rclpy.action import ActionClient
 from rclpy.constants import S_TO_NS
 from rclpy.node import Node
-from control_msgs.action import FollowJointTrajectory
 from trajectory_msgs.msg import JointTrajectoryPoint
+
 
 class ArmDemo(Node):
     """Demo node for sending trajectory goals to the Trossen Arm's arm_controller."""
