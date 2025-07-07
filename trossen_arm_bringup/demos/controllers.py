@@ -81,13 +81,6 @@ class ArmDemoNode(Node):
         :param feedback_msg: Feedback message from the action server.
         """
         feedback: FollowJointTrajectory.Feedback = feedback_msg.feedback
-        if feedback.joint_names != self.joint_names:
-            self.get_logger().warn(
-                'Received feedback with unexpected joint names: %s',
-                feedback.joint_names
-            )
-            return
-
         self.get_logger().info(f'Current positions: {feedback.actual.positions}')
         self.get_logger().info(f'Desired positions: {feedback.desired.positions}')
 
@@ -98,7 +91,7 @@ class ArmDemoNode(Node):
         :param future: Future object containing the result from the action server.
         """
         result: FollowJointTrajectory.Result = future.result().result
-        self.get_logger().info(f'Goal completed with status: {result.error_code}')
+        self.get_logger().info(f'Goal completed with result: {result}')
         self._is_running = False
 
     def _goal_response_callback(self, future):
@@ -109,8 +102,10 @@ class ArmDemoNode(Node):
         """
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.get_logger().fatal('Goal rejected!')
-            exit()
+            self._is_running = False
+            fatal_msg = 'Gripper goal rejected!'
+            self.get_logger().fatal(fatal_msg)
+            raise RuntimeError(fatal_msg)
 
         self.get_logger().info('Goal accepted!')
 
@@ -182,8 +177,8 @@ class GripperDemoNode(Node):
 
         :param future: Future object containing the result from the action server.
         """
-        result = future.result().result
-        self.get_logger().info(f'Gripper action completed with status: {result}')
+        result: ParallelGripperCommand.Result = future.result().result
+        self.get_logger().info(f'Gripper action completed with result: {result}')
         self._is_running = False
 
     def _goal_response_callback(self, future):
@@ -194,13 +189,16 @@ class GripperDemoNode(Node):
         """
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.get_logger().fatal('Gripper goal rejected!')
-            exit()
+            self._is_running = False
+            fatal_msg = 'Gripper goal rejected!'
+            self.get_logger().fatal(fatal_msg)
+            raise RuntimeError(fatal_msg)
+
         self.get_logger().info('Gripper goal accepted!')
         self._get_result_future = goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self._get_result_callback)
 
-    def send_goal(self, position: float):
+    def send_goal(self, position: list[float]):
         """
         Send a gripper command goal to the gripper_controller.
 
@@ -219,21 +217,18 @@ class GripperDemoNode(Node):
 
 
 def main(args=None):
-    """
-    Run the demo: move the arm, open/close the gripper, and return the arm home.
-    """
     rclpy.init(args=args)
     arm = ArmDemoNode('/arm_controller/follow_joint_trajectory')
     gripper = GripperDemoNode('/gripper_controller/gripper_cmd')
 
-    target_position = [0.0, math.pi / 2.0, math.pi / 2.0, 0.0, 0.0, 0.0]  # upright position
-    home_position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    open_position = [0.04]  # fully open
-    closed_position = [0.0]
+    arm_target_position = [0.0, math.pi / 2.0, math.pi / 2.0, 0.0, 0.0, 0.0]  # upright position
+    arm_home_position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    gripper_open_position = [0.04]  # fully open
+    gripper_closed_position = [0.0]
 
     # Send to target position
     arm.get_logger().info('Sending arm to target position...')
-    future = arm.send_goal(target_position, duration_s=2.0)
+    future = arm.send_goal(arm_target_position, duration_s=2.0)
     rclpy.spin_until_future_complete(arm, future)
     while arm._is_running:
         rclpy.spin_once(arm)
@@ -241,7 +236,7 @@ def main(args=None):
 
     # Open gripper
     gripper.get_logger().info('Opening gripper...')
-    future = gripper.send_goal(open_position)
+    future = gripper.send_goal(gripper_open_position)
     rclpy.spin_until_future_complete(gripper, future)
     while gripper._is_running:
         rclpy.spin_once(gripper)
@@ -251,7 +246,7 @@ def main(args=None):
 
     # Close gripper
     gripper.get_logger().info('Closing gripper...')
-    future = gripper.send_goal(closed_position)
+    future = gripper.send_goal(gripper_closed_position)
     rclpy.spin_until_future_complete(gripper, future)
     while gripper._is_running:
         rclpy.spin_once(gripper)
@@ -261,7 +256,7 @@ def main(args=None):
 
     # Send to home position
     arm.get_logger().info('Sending arm to home position...')
-    future = arm.send_goal(home_position, duration_s=2.0)
+    future = arm.send_goal(arm_home_position, duration_s=2.0)
     rclpy.spin_until_future_complete(arm, future)
     while arm._is_running:
         rclpy.spin_once(arm)
