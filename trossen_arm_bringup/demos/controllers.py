@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Copyright 2025 Trossen Robotics
 #
 # Redistribution and use in source and binary forms, with or without
