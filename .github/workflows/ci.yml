@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - jazzy
+      - humble
+  pull_request:
+    branches:
+      - main
+      - jazzy
+      - humble
+  workflow_dispatch:
+
+jobs:
+  build_and_test_jazzy:
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/jazzy'
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ros-tooling/setup-ros@v0.7
+        with:
+          use-ros2-testing: true
+          required-ros-distributions: jazzy
+      - uses: ros-tooling/action-ros-ci@v0.3
+        with:
+          target-ros2-distro: jazzy
+          vcs-repo-file-url: dependencies.repos
+
+  build_and_test_humble:
+    if: github.ref == 'refs/heads/humble'
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:jammy
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ros-tooling/setup-ros@v0.7
+        with:
+          use-ros2-testing: true
+          required-ros-distributions: humble
+      - uses: ros-tooling/action-ros-ci@v0.3
+        with:
+          target-ros2-distro: humble
+          vcs-repo-file-url: dependencies.repos
