@@ -54,7 +54,7 @@ from launch_ros.substitutions import FindPackageShare
 
 @dataclass
 class ArmLaunchConfig:
-    """Configuration for a single instance of a Trossen Arm in a mutli-arm launch file."""
+    """Configuration for a single instance of a Trossen Arm in a multi-arm launch file."""
 
     robot_model: str
     """Robot model codename, such as `wxai`"""
@@ -143,7 +143,7 @@ def generate_launch_description_for_robot(robot: ArmLaunchConfig) -> list[Action
         'use_world_frame:=false ',
         'arm_variant:=', robot.arm_variant, ' ',
         'arm_side:=', robot.arm_side, ' ',
-        'ros2_control_hardware_type:=', robot.ros2_control_hardware_type, ' '
+        'ros2_control_hardware_type:=', robot.ros2_control_hardware_type, ' ',
         'ip_address:=', robot.ip_address,
     ])
 
