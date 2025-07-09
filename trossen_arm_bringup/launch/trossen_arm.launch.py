@@ -124,7 +124,7 @@ def launch_setup(context, *args, **kwargs):
     ]
 
 
-def generate_launch_description():
+def generate_launch_description() -> LaunchDescription:
     declared_arguments = []
     declared_arguments.append(
         DeclareLaunchArgument(
