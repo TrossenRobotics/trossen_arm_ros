@@ -28,7 +28,8 @@
 
 from dataclasses import dataclass
 from typing import Literal
-from launch import LaunchDescription, Action
+
+from launch import Action, LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     RegisterEventHandler,
@@ -47,13 +48,14 @@ from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import (
     ParameterFile,
 )
-from launch_ros.substitutions import FindPackageShare
 from launch_ros.parameter_descriptions import ParameterValue
+from launch_ros.substitutions import FindPackageShare
 
 
 @dataclass
 class ArmLaunchConfig:
     """Configuration for a single instance of a Trossen Arm in a mutli-arm launch file."""
+
     robot_model: str
     """Robot model codename, such as `wxai`"""
 
@@ -93,6 +95,7 @@ class ArmLaunchConfig:
     yaw: float
     """Yaw angle of the robot in radians"""
 
+
 ROBOTS = [
     ArmLaunchConfig(
         robot_model='wxai',
@@ -103,7 +106,7 @@ ROBOTS = [
         ros2_control_hardware_type='mock_components',
         ros2_controllers_config_parameter_filename='dual_arm_controllers.yaml',
         x=0.0,
-        y=-0.5,
+        y=-0.25,
         z=0.0,
         roll=0.0,
         pitch=0.0,
@@ -118,7 +121,7 @@ ROBOTS = [
         ros2_control_hardware_type='mock_components',
         ros2_controllers_config_parameter_filename='dual_arm_controllers.yaml',
         x=0.0,
-        y=0.5,
+        y=0.25,
         z=0.0,
         roll=0.0,
         pitch=0.0,
@@ -149,9 +152,14 @@ def generate_launch_description_for_robot(robot: ArmLaunchConfig) -> list[Action
         executable='static_transform_publisher',
         name=f'{robot.robot_name}_static_transform_publisher',
         arguments=[
-            str(robot.x), str(robot.y), str(robot.z),
-            str(robot.roll), str(robot.pitch), str(robot.yaw),
-            'world', f'{robot.robot_name}/base_link',
+            '--x', str(robot.x),
+            '--y', str(robot.y),
+            '--z', str(robot.z),
+            '--roll', str(robot.roll),
+            '--pitch', str(robot.pitch),
+            '--yaw', str(robot.yaw),
+            '--frame-id', 'world',
+            '--child-frame-id', f'{robot.robot_name}/base_link',
         ],
         output={'both': 'screen'},
     )
@@ -171,11 +179,10 @@ def generate_launch_description_for_robot(robot: ArmLaunchConfig) -> list[Action
         namespace=robot.robot_name,
         parameters=[
             ros2_control_controllers_config_parameter_file,
-            {'robot_description': ParameterValue(robot_description, value_type=str)},
         ],
-        # remappings=[
-        #     ('~/robot_description', '/robot_description'),
-        # ],
+        remappings=[
+            ('~/robot_description', '/robot_description'),
+        ],
         output={'both': 'screen'},
     )
 
@@ -194,7 +201,6 @@ def generate_launch_description_for_robot(robot: ArmLaunchConfig) -> list[Action
                 arguments=[
                     controller_name,
                     '--controller-manager', f'/{robot.robot_name}/controller_manager',
-                    # '--namespace', robot.robot_name,
                 ],
                 output={'both': 'screen'},
             )
@@ -229,7 +235,6 @@ def generate_launch_description() -> LaunchDescription:
     for robot in ROBOTS:
         robot_actions.extend(generate_launch_description_for_robot(robot))
 
-
     use_rviz_launch_arg = DeclareLaunchArgument(
         'use_rviz',
         default_value='true',
@@ -245,13 +250,6 @@ def generate_launch_description() -> LaunchDescription:
         ]),
         description='file path to the config file RViz should load.',
     )
-
-    # joint_state_publisher_node = Node(
-    #     condition=IfCondition(use_joint_pub_launch_arg),
-    #     package='joint_state_publisher',
-    #     executable='joint_state_publisher',
-    #     output={'both': 'screen'},
-    # )
 
     rviz2_node = Node(
         condition=IfCondition(LaunchConfiguration('use_rviz')),
@@ -273,102 +271,3 @@ def generate_launch_description() -> LaunchDescription:
         ld.add_action(robot_action)
 
     return ld
-
-    # return [
-    #     ld.
-    #     *robot_nodes,
-    #     rviz2_node,
-    # ]
-
-
-# def generate_launch_description() -> LaunchDescription:
-#     declared_arguments = []
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'robot_model',
-#             default_value='wxai',
-#             choices=('wxai'),
-#             description='model codename of the Trossen Arm such as `wxai`.'
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'arm_variant',
-#             default_value='base',
-#             choices=('base', 'leader', 'follower'),
-#             description='End effector variant of the Trossen Arm.',
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'arm_side',
-#             default_value='none',
-#             choices=('none', 'left', 'right'),
-#             description=(
-#                 'Side of the Trossen Arm. Note that only the wxai follower variant has a left '
-#                 'and right side.'
-#             ),
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'ip_address',
-#             default_value='192.168.1.2',
-#             description='IP address of the robot.',
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'ros2_control_hardware_type',
-#             default_value='real',
-#             choices=('real', 'mock_components'),
-#             description='Use real or mocked hardware interface.'
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'use_world_frame',
-#             default_value='false',
-#             choices=('true', 'false'),
-#             description='Use world frame.'
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'use_rviz',
-#             default_value='true',
-#             choices=('true', 'false'),
-#             description='Use rviz.'
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'rvizconfig',
-#             default_value=PathJoinSubstitution([
-#                 FindPackageShare('trossen_arm_description'),
-#                 'rviz',
-#                 'trossen_arm_description.rviz',
-#             ]),
-#             description='file path to the config file RViz should load.',
-#         )
-#     )
-#     declared_arguments.append(
-#         DeclareLaunchArgument(
-#             'robot_description',
-#             default_value=Command([
-#                 FindExecutable(name='xacro'), ' ',
-#                 PathJoinSubstitution([
-#                     FindPackageShare('trossen_arm_description'),
-#                     'urdf',
-#                     LaunchConfiguration('robot_model'),
-#                     ]), '.urdf.xacro ',
-#                 'use_world_frame:=', LaunchConfiguration('use_world_frame'), ' ',
-#                 'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
-#                 'arm_side:=', LaunchConfiguration('arm_side'), ' ',
-#                 'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'), ' ',
-#                 'ip_address:=', LaunchConfiguration('ip_address'),
-#             ])
-#         )
-#     )
-
-#     return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])

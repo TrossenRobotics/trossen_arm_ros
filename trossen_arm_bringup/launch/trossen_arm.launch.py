@@ -53,7 +53,6 @@ from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context, *args, **kwargs):
-
     robot_model_launch_arg = LaunchConfiguration('robot_model')
     robot_description_launch_arg = LaunchConfiguration('robot_description')
 
