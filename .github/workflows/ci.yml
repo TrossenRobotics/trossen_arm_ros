@@ -31,6 +31,11 @@ jobs:
         with:
           target-ros2-distro: jazzy
           vcs-repo-file-url: dependencies.repos
+          package-name: |
+            trossen_arm_bringup
+            trossen_arm_hardware
+            trossen_arm_moveit
+            trossen_arm_ros
 
   build_and_test_humble:
     if: |
@@ -49,3 +54,8 @@ jobs:
         with:
           target-ros2-distro: humble
           vcs-repo-file-url: dependencies.repos
+          package-name: |
+            trossen_arm_bringup
+            trossen_arm_hardware
+            trossen_arm_moveit
+            trossen_arm_ros
