@@ -15,7 +15,9 @@ on:
 
 jobs:
   build_and_test_jazzy:
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/jazzy'
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/jazzy') ||
+      (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'jazzy'))
     runs-on: ubuntu-latest
     container:
       image: ubuntu:noble
@@ -31,7 +33,9 @@ jobs:
           vcs-repo-file-url: dependencies.repos
 
   build_and_test_humble:
-    if: github.ref == 'refs/heads/humble'
+    if: |
+      github.ref == 'refs/heads/humble' ||
+      (github.event_name == 'pull_request' && github.base_ref == 'humble')
     runs-on: ubuntu-latest
     container:
       image: ubuntu:jammy
