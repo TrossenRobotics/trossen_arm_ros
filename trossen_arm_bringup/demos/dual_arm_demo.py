@@ -38,11 +38,11 @@ from controllers import ArmDemoNode, GripperDemoNode
 
 def main(args=None):
     rclpy.init(args=args)
-    arm = ArmDemoNode(
+    arm_1 = ArmDemoNode(
         action_name='arm_controller/follow_joint_trajectory',
         namespace='trossen_arm_1',
     )
-    gripper = GripperDemoNode(
+    gripper_2 = GripperDemoNode(
         action_name='gripper_controller/gripper_cmd',
         namespace='trossen_arm_2',
     )
@@ -52,44 +52,44 @@ def main(args=None):
     gripper_open_position = [0.04]  # fully open
     gripper_closed_position = [0.0]
 
-    # Send to target position
-    arm.get_logger().info('Sending arm to target position...')
-    future = arm.send_goal(arm_target_position, duration_s=2.0)
-    rclpy.spin_until_future_complete(arm, future)
-    while arm._is_running:
-        rclpy.spin_once(arm)
-    arm.get_logger().info('Reached target position.')
+    # Send arm_1 to target position
+    arm_1.get_logger().info('Sending arm_1 to target position...')
+    future = arm_1.send_goal(arm_target_position, duration_s=2.0)
+    rclpy.spin_until_future_complete(arm_1, future)
+    while arm_1._is_running:
+        rclpy.spin_once(arm_1)
+    arm_1.get_logger().info('Reached target position.')
 
-    # Open gripper
-    gripper.get_logger().info('Opening gripper...')
-    future = gripper.send_goal(gripper_open_position)
-    rclpy.spin_until_future_complete(gripper, future)
-    while gripper._is_running:
-        rclpy.spin_once(gripper)
-    gripper.get_logger().info('Gripper opened.')
-
-    time.sleep(1.0)
-
-    # Close gripper
-    gripper.get_logger().info('Closing gripper...')
-    future = gripper.send_goal(gripper_closed_position)
-    rclpy.spin_until_future_complete(gripper, future)
-    while gripper._is_running:
-        rclpy.spin_once(gripper)
-    gripper.get_logger().info('Gripper closed.')
+    # Open gripper_2
+    gripper_2.get_logger().info('Opening gripper_2...')
+    future = gripper_2.send_goal(gripper_open_position)
+    rclpy.spin_until_future_complete(gripper_2, future)
+    while gripper_2._is_running:
+        rclpy.spin_once(gripper_2)
+    gripper_2.get_logger().info('Gripper opened.')
 
     time.sleep(1.0)
 
-    # Send to home position
-    arm.get_logger().info('Sending arm to home position...')
-    future = arm.send_goal(arm_home_position, duration_s=2.0)
-    rclpy.spin_until_future_complete(arm, future)
-    while arm._is_running:
-        rclpy.spin_once(arm)
-    arm.get_logger().info('Reached home position.')
+    # Close gripper_2
+    gripper_2.get_logger().info('Closing gripper_2...')
+    future = gripper_2.send_goal(gripper_closed_position)
+    rclpy.spin_until_future_complete(gripper_2, future)
+    while gripper_2._is_running:
+        rclpy.spin_once(gripper_2)
+    gripper_2.get_logger().info('Gripper closed.')
 
-    arm.destroy_node()
-    gripper.destroy_node()
+    time.sleep(1.0)
+
+    # Send arm_1 to home position
+    arm_1.get_logger().info('Sending arm_1 to home position...')
+    future = arm_1.send_goal(arm_home_position, duration_s=2.0)
+    rclpy.spin_until_future_complete(arm_1, future)
+    while arm_1._is_running:
+        rclpy.spin_once(arm_1)
+    arm_1.get_logger().info('Reached home position.')
+
+    arm_1.destroy_node()
+    gripper_2.destroy_node()
     rclpy.shutdown()
 
 
