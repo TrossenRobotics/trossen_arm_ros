@@ -5,7 +5,6 @@
   <version>1.0.0</version>
   <description>Configurations for using Trossen Arm hardware with ros2_control</description>
 
-  <author email="trsupport@trossenrobotics.com">Trossen Robotics</author>
   <maintainer email="trsupport@trossenrobotics.com">Trossen Robotics</maintainer>
 
   <license>BSD-3-Clause</license>
