@@ -78,7 +78,7 @@ class ArmLaunchConfig:
     """Name of the ROS 2 controllers configuration file, such as `controllers.yaml`"""
 
     x: float
-    """X coordinate of the robot in meters"""
+    """X coordinate of the robot base frame in meters measured in the world frame"""
 
     y: float
     """Y coordinate of the robot in meters"""
