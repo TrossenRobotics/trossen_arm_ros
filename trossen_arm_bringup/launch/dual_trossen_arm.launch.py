@@ -131,7 +131,6 @@ ROBOTS = [
 
 
 def generate_launch_description_for_robot(robot: ArmLaunchConfig) -> list[Action]:
-    robot_model_launch_arg = robot.robot_model
     robot_description = Command([
         FindExecutable(name='xacro'), ' ',
         PathJoinSubstitution([
