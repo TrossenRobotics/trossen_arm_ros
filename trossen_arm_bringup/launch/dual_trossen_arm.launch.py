@@ -81,19 +81,19 @@ class ArmLaunchConfig:
     """X coordinate of the robot base frame in meters measured in the world frame"""
 
     y: float
-    """Y coordinate of the robot in meters"""
+    """Y coordinate of the robot base frame in meters measured in the world frame"""
 
     z: float
-    """Z coordinate of the robot in meters"""
+    """Z coordinate of the robot base frame in meters measured in the world frame"""
 
     roll: float
-    """Roll angle of the robot in radians"""
+    """Roll angle of the robot base frame in radians measured in the world frame"""
 
     pitch: float
-    """Pitch angle of the robot in radians"""
+    """Pitch angle of the robot base frame in radians measured in the world frame""""
 
     yaw: float
-    """Yaw angle of the robot in radians"""
+    """Yaw angle of the robot base frame in radians measured in the world frame"""
 
 
 ROBOTS = [
