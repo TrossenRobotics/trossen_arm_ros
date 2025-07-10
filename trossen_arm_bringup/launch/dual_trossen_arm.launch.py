@@ -90,7 +90,7 @@ class ArmLaunchConfig:
     """Roll angle of the robot base frame in radians measured in the world frame"""
 
     pitch: float
-    """Pitch angle of the robot base frame in radians measured in the world frame""""
+    """Pitch angle of the robot base frame in radians measured in the world frame"""
 
     yaw: float
     """Yaw angle of the robot base frame in radians measured in the world frame"""
