@@ -137,7 +137,7 @@ def generate_launch_description_for_robot(robot: ArmLaunchConfig) -> list[Action
         PathJoinSubstitution([
             FindPackageShare('trossen_arm_description'),
             'urdf',
-            robot_model_launch_arg,
+            robot.robot_model,
         ]), '.urdf.xacro ',
         'prefix:=', robot.robot_name + '/', ' ',
         'use_world_frame:=false ',

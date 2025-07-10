@@ -47,14 +47,14 @@ class ArmDemoNode(Node):
 
     def __init__(
         self,
-        action_name: str = '/arm_controller/follow_joint_trajectory',
         namespace: str = '',
+        action_name: str = '/arm_controller/follow_joint_trajectory',
     ):
         """
         Initialize the ArmDemo node and connect to the arm_controller action server.
 
-        :param action_name: The name of the FollowJointTrajectory action server.
         :param namespace: Optional namespace to prepend to the action name and joint names.
+        :param action_name: Optional name of the FollowJointTrajectory action server.
         """
         super().__init__('arm_demo')
         self.joint_names = [
@@ -154,14 +154,14 @@ class GripperDemoNode(Node):
 
     def __init__(
         self,
-        action_name: str = '/gripper_controller/gripper_cmd',
         namespace: str = '',
+        action_name: str = '/gripper_controller/gripper_cmd',
     ):
         """
         Initialize the GripperDemo node and connect to the gripper_controller action server.
 
-        :param action_name: The name of the ParallelGripperCommand action server.
         :param namespace: Optional namespace to prepend to the action name.
+        :param action_name: Optional name of the ParallelGripperCommand action server.
         """
         super().__init__('gripper_demo')
 
