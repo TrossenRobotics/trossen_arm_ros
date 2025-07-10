@@ -39,12 +39,12 @@ from controllers import ArmDemoNode, GripperDemoNode
 def main(args=None):
     rclpy.init(args=args)
     arm_1 = ArmDemoNode(
-        action_name='arm_controller/follow_joint_trajectory',
         namespace='trossen_arm_1',
+        action_name='arm_controller/follow_joint_trajectory',
     )
     gripper_2 = GripperDemoNode(
-        action_name='gripper_controller/gripper_cmd',
         namespace='trossen_arm_2',
+        action_name='gripper_controller/gripper_cmd',
     )
 
     arm_target_position = [0.0, math.pi / 2.0, math.pi / 2.0, 0.0, 0.0, 0.0]  # upright position
