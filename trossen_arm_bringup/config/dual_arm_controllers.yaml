@@ -1,0 +1,93 @@
+trossen_arm_1/:
+  controller_manager:
+    ros__parameters:
+      update_rate: 100 # Hz
+      arm_controller:
+        type: joint_trajectory_controller/JointTrajectoryController
+
+      gripper_controller:
+        type: position_controllers/GripperActionController
+
+      joint_state_broadcaster:
+        type: joint_state_broadcaster/JointStateBroadcaster
+
+  arm_controller:
+    ros__parameters:
+      joints:
+        - trossen_arm_1/joint_0
+        - trossen_arm_1/joint_1
+        - trossen_arm_1/joint_2
+        - trossen_arm_1/joint_3
+        - trossen_arm_1/joint_4
+        - trossen_arm_1/joint_5
+      command_joints:
+        - trossen_arm_1/joint_0
+        - trossen_arm_1/joint_1
+        - trossen_arm_1/joint_2
+        - trossen_arm_1/joint_3
+        - trossen_arm_1/joint_4
+        - trossen_arm_1/joint_5
+      command_interfaces:
+        - position
+      state_interfaces:
+        - position
+        - velocity
+
+      state_publish_rate: 50.0 # Hz
+      action_monitor_rate: 20.0 # Hz
+      allow_partial_joints_goal: false
+      allow_nonzero_velocity_at_trajectory_end: false
+      constraints:
+        stopped_velocity_tolerance: 0.02
+        goal_time: 2.0
+
+  gripper_controller:
+    ros__parameters:
+      joint: trossen_arm_1/left_carriage_joint
+
+trossen_arm_2/:
+  controller_manager:
+    ros__parameters:
+      update_rate: 100 # Hz
+      arm_controller:
+        type: joint_trajectory_controller/JointTrajectoryController
+
+      gripper_controller:
+        type: position_controllers/GripperActionController
+
+      joint_state_broadcaster:
+        type: joint_state_broadcaster/JointStateBroadcaster
+
+  arm_controller:
+    ros__parameters:
+      joints:
+        - trossen_arm_2/joint_0
+        - trossen_arm_2/joint_1
+        - trossen_arm_2/joint_2
+        - trossen_arm_2/joint_3
+        - trossen_arm_2/joint_4
+        - trossen_arm_2/joint_5
+      command_joints:
+        - trossen_arm_2/joint_0
+        - trossen_arm_2/joint_1
+        - trossen_arm_2/joint_2
+        - trossen_arm_2/joint_3
+        - trossen_arm_2/joint_4
+        - trossen_arm_2/joint_5
+      command_interfaces:
+        - position
+      state_interfaces:
+        - position
+        - velocity
+
+      state_publish_rate: 50.0 # Hz
+      action_monitor_rate: 20.0 # Hz
+      allow_partial_joints_goal: false
+      allow_nonzero_velocity_at_trajectory_end: false
+      constraints:
+        stopped_velocity_tolerance: 0.02
+        goal_time: 2.0
+
+  gripper_controller:
+    ros__parameters:
+      joint: trossen_arm_2/left_carriage_joint
