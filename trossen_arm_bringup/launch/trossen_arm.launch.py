@@ -194,7 +194,7 @@ def generate_launch_description() -> LaunchDescription:
                     LaunchConfiguration('robot_model'),
                     ]), '.urdf.xacro ',
                 'use_world_frame:=', LaunchConfiguration('use_world_frame'), ' ',
-                'arm_variant:=', LaunchConfiguration('arm_variant'), ' ',
+                'variant:=', LaunchConfiguration('arm_variant'), ' ',
                 'arm_side:=', LaunchConfiguration('arm_side'), ' ',
                 'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'),
                 ' ',

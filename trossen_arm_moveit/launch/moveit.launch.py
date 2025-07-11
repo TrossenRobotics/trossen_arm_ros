@@ -61,7 +61,7 @@ def launch_setup(context, *args, **kwargs):
                 'wxai.urdf.xacro',
             ]).perform(context),
             mappings={
-                'arm_variant': LaunchConfiguration('arm_variant'),
+                'variant': LaunchConfiguration('arm_variant'),
                 'ip_address': LaunchConfiguration('ip_address'),
                 'ros2_control_hardware_type': LaunchConfiguration('ros2_control_hardware_type'),
             }
