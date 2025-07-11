@@ -29,17 +29,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 """
-Demo for the trossen_arm_bringup package.
+Demo controller action clients for the trossen_arm_bringup package.
 
-This script demonstrates how to control the Trossen Arm's arm and gripper using
-the action interfaces provided by the arm_controller and gripper_controller.
+These modules demonstrate how to control the Trossen Arm's arm and gripper using the action
+interfaces provided by the arm_controller and gripper_controller.
 """
 
-import math
-import time
-
-from control_msgs.action import GripperCommand, FollowJointTrajectory
-import rclpy
+from control_msgs.action import FollowJointTrajectory, GripperCommand
 from rclpy.action import ActionClient
 from rclpy.constants import S_TO_NS
 from rclpy.node import Node
@@ -49,13 +45,32 @@ from trajectory_msgs.msg import JointTrajectoryPoint
 class ArmDemoNode(Node):
     """Demo node for sending trajectory goals to the Trossen Arm's arm_controller."""
 
-    def __init__(self, action_name: str = '/arm_controller/follow_joint_trajectory'):
+    def __init__(
+        self,
+        namespace: str = '',
+        action_name: str = '/arm_controller/follow_joint_trajectory',
+    ):
         """
         Initialize the ArmDemo node and connect to the arm_controller action server.
 
-        :param action_name: The name of the FollowJointTrajectory action server.
+        :param namespace: Optional namespace to prepend to the action name and joint names.
+        :param action_name: Optional name of the FollowJointTrajectory action server.
         """
         super().__init__('arm_demo')
+        self.joint_names = [
+            'joint_0',
+            'joint_1',
+            'joint_2',
+            'joint_3',
+            'joint_4',
+            'joint_5',
+        ]
+
+        if namespace:
+            action_name = f'{namespace}/{action_name}'
+            for i in range(len(self.joint_names)):
+                self.joint_names[i] = f'{namespace}/{self.joint_names[i]}'
+
         self._action_client = ActionClient(
             self,
             FollowJointTrajectory,
@@ -65,14 +80,6 @@ class ArmDemoNode(Node):
             self.get_logger().info(
                 f"Waiting for '{self._action_client._action_name}' action server..."
             )
-        self.joint_names = [
-            'joint_0',
-            'joint_1',
-            'joint_2',
-            'joint_3',
-            'joint_4',
-            'joint_5',
-        ]
         self._is_running = False
         self.get_logger().info(f'ArmDemo initialized with action server: {action_name}')
 
@@ -145,13 +152,22 @@ class ArmDemoNode(Node):
 class GripperDemoNode(Node):
     """Demo node for sending gripper commands to the Trossen Arm's gripper_controller."""
 
-    def __init__(self, action_name: str = '/gripper_controller/gripper_cmd'):
+    def __init__(
+        self,
+        namespace: str = '',
+        action_name: str = '/gripper_controller/gripper_cmd',
+    ):
         """
         Initialize the GripperDemo node and connect to the gripper_controller action server.
 
-        :param action_name: The name of the GripperCommand action server.
+        :param namespace: Optional namespace to prepend to the action name.
+        :param action_name: Optional name of the GripperCommand action server.
         """
         super().__init__('gripper_demo')
+
+        if namespace:
+            action_name = f'{namespace}/{action_name}'
+
         self._action_client = ActionClient(
             self,
             GripperCommand,
@@ -200,7 +216,7 @@ class GripperDemoNode(Node):
         self._get_result_future = goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self._get_result_callback)
 
-    def send_goal(self, position: list[float]):
+    def send_goal(self, position: float):
         """
         Send a gripper command goal to the gripper_controller.
 
@@ -216,58 +232,3 @@ class GripperDemoNode(Node):
         self._is_running = True
         future.add_done_callback(self._goal_response_callback)
         return future
-
-
-def main(args=None):
-    rclpy.init(args=args)
-    arm = ArmDemoNode('/arm_controller/follow_joint_trajectory')
-    gripper = GripperDemoNode('/gripper_controller/gripper_cmd')
-
-    arm_target_position = [0.0, math.pi / 2.0, math.pi / 2.0, 0.0, 0.0, 0.0]  # upright position
-    arm_home_position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    gripper_open_position = 0.04  # fully open
-    gripper_closed_position = 0.0
-
-    # Send to target position
-    arm.get_logger().info('Sending arm to target position...')
-    future = arm.send_goal(arm_target_position, duration_s=2.0)
-    rclpy.spin_until_future_complete(arm, future)
-    while arm._is_running:
-        rclpy.spin_once(arm)
-    arm.get_logger().info('Reached target position.')
-
-    # Open gripper
-    gripper.get_logger().info('Opening gripper...')
-    future = gripper.send_goal(gripper_open_position)
-    rclpy.spin_until_future_complete(gripper, future)
-    while gripper._is_running:
-        rclpy.spin_once(gripper)
-    gripper.get_logger().info('Gripper opened.')
-
-    time.sleep(1.0)
-
-    # Close gripper
-    gripper.get_logger().info('Closing gripper...')
-    future = gripper.send_goal(gripper_closed_position)
-    rclpy.spin_until_future_complete(gripper, future)
-    while gripper._is_running:
-        rclpy.spin_once(gripper)
-    gripper.get_logger().info('Gripper closed.')
-
-    time.sleep(1.0)
-
-    # Send to home position
-    arm.get_logger().info('Sending arm to home position...')
-    future = arm.send_goal(arm_home_position, duration_s=2.0)
-    rclpy.spin_until_future_complete(arm, future)
-    while arm._is_running:
-        rclpy.spin_once(arm)
-    arm.get_logger().info('Reached home position.')
-
-    arm.destroy_node()
-    gripper.destroy_node()
-    rclpy.shutdown()
-
-
-if __name__ == '__main__':
-    main()
