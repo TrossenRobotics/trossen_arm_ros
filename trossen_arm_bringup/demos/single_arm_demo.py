@@ -33,7 +33,7 @@ import time
 
 import rclpy
 
-from controllers import ArmDemoNode, GripperDemoNode
+from controllers import ArmDemoNode, GripperDemoNode  # noqa: I100
 
 
 def main(args=None):
