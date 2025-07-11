@@ -35,11 +35,7 @@ These modules demonstrate how to control the Trossen Arm's arm and gripper using
 interfaces provided by the arm_controller and gripper_controller.
 """
 
-import math
-import time
-
 from control_msgs.action import GripperCommand, FollowJointTrajectory
-import rclpy
 from rclpy.action import ActionClient
 from rclpy.constants import S_TO_NS
 from rclpy.node import Node
