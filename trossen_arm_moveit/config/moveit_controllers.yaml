@@ -25,7 +25,7 @@ moveit_simple_controller_manager:
 
   gripper_controller:
     action_ns: gripper_cmd
-    type: GripperCommand
+    type: ParallelGripperCommand
     allow_nonzero_velocity_at_trajectory_end: false
     default: true
     max_effort: 100.0
