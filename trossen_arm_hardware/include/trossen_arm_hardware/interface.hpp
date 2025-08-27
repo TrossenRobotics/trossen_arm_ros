@@ -96,6 +96,9 @@ protected:
   // End effector type of the robot this hardware interface connects to
   trossen_arm::EndEffector end_effector_;
 
+  // String representation of the end effector type
+  std::string end_effector_str_;
+
   // IP address of the driver this hardware interface connects to
   std::string driver_ip_address_{DRIVER_IP_ADDRESS_DEFAULT};
 
