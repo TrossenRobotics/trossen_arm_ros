@@ -67,8 +67,10 @@ def launch_setup(context, *args, **kwargs):
             }
         )
         .robot_description_semantic(
-            file_path='config/wxai.srdf',
-            mappings={},
+            file_path='config/wxai.srdf.xacro',
+            mappings={
+                'variant': LaunchConfiguration('arm_variant'),
+            },
         )
         .planning_scene_monitor(
             publish_geometry_updates=True,
@@ -198,7 +200,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'arm_variant',
             default_value='base',
-            choices=('base', 'leader'),
+            choices=('base', 'follower'),
             description='End effector variant of the Trossen Arm.',
         )
     )
