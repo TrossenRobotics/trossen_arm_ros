@@ -48,6 +48,10 @@ namespace trossen_arm_hardware
 
 static const char DRIVER_IP_ADDRESS_DEFAULT[] = "192.168.1.2";
 
+static const char END_EFFECTOR_BASE[] = "base";
+static const char END_EFFECTOR_FOLLOWER[] = "follower";
+static const char END_EFFECTOR_LEADER[] = "leader";
+
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 using hardware_interface::CommandInterface;
@@ -88,6 +92,12 @@ protected:
 
   // Model of the robot this hardware interface connects to
   trossen_arm::Model robot_model_;
+
+  // End effector type of the robot this hardware interface connects to
+  trossen_arm::EndEffector end_effector_;
+
+  // String representation of the end effector type
+  std::string end_effector_str_;
 
   // IP address of the driver this hardware interface connects to
   std::string driver_ip_address_{DRIVER_IP_ADDRESS_DEFAULT};

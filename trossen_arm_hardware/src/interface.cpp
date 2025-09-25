@@ -59,6 +59,31 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     return CallbackReturn::FAILURE;
   }
 
+  // Get robot end effector
+  try {
+    end_effector_str_ = info.hardware_parameters.at("end_effector");
+    if (end_effector_str_ == END_EFFECTOR_BASE) {
+      end_effector_ = trossen_arm::StandardEndEffector::wxai_v0_base;
+    } else if (end_effector_str_ == END_EFFECTOR_FOLLOWER) {
+      end_effector_ = trossen_arm::StandardEndEffector::wxai_v0_follower;
+    } else if (end_effector_str_ == END_EFFECTOR_LEADER) {
+      end_effector_ = trossen_arm::StandardEndEffector::wxai_v0_leader;
+    } else {
+      RCLCPP_FATAL(
+        get_logger(),
+        "Invalid 'end_effector' value specified: '%s'.", end_effector_str_.c_str());
+      return CallbackReturn::FAILURE;
+    }
+    RCLCPP_INFO(
+      get_logger(),
+      "Parameter 'end_effector' set to '%s'.", end_effector_str_.c_str());
+  } catch (const std::out_of_range & /*e*/) {
+    RCLCPP_FATAL(
+      get_logger(),
+      "Required parameter 'end_effector' not specified.");
+    return CallbackReturn::FAILURE;
+  }
+
   // Get robot IP address
   try {
     driver_ip_address_ = info.hardware_parameters.at("ip_address");
@@ -220,7 +245,7 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
   try {
     arm_driver_->configure(
       robot_model_,
-      trossen_arm::StandardEndEffector::wxai_v0_base,
+      end_effector_,
       driver_ip_address_.c_str(),
       true);
   } catch (const std::exception & e) {
@@ -235,9 +260,10 @@ TrossenArmHardwareInterface::on_configure(const rclcpp_lifecycle::State & /*prev
 
   RCLCPP_INFO(
     get_logger(),
-    "TrossenArmDriver configured with model %d, IP Address '%s'.",
+    "TrossenArmDriver configured with model %d, IP Address '%s', End Effector '%s'.",
     static_cast<int>(robot_model_),
-    driver_ip_address_.c_str());
+    driver_ip_address_.c_str(),
+    end_effector_str_.c_str());
 
   return CallbackReturn::SUCCESS;
 }
