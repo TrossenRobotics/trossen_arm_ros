@@ -106,6 +106,29 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
 
   // Joint command interfaces
   joint_position_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
+  joint_torque_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
+
+  // Check that all joints have the same command interface
+  if (info_.joints.size() > 0) {
+    const std::string& expected_interface = info_.joints[0].command_interfaces.at(INDEX_COMMAND_INTERFACE_).name;
+
+    bool all_same = std::all_of(
+      info_.joints.begin(),
+      info_.joints.end(),
+      [&](const auto& joint) {
+        return joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_).name == expected_interface;
+      }
+    );
+
+    if (!all_same) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Not all joints have the same command interface type.");
+      return CallbackReturn::ERROR;
+    }
+
+    command_interface_ = expected_interface;
+  }
 
   for (const auto & joint : info_.joints) {
     // Only a single command interface per joint is supported for now
@@ -119,14 +142,16 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
       return CallbackReturn::ERROR;
     }
 
-    // Only position command interface is expected
-    if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_POSITION_).name != HW_IF_POSITION) {
+    // Only position or effort command interface is expected
+    if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_).name != HW_IF_POSITION &&
+        joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_).name != HW_IF_EFFORT) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has '%s' command interface found. '%s' expected",
+        "Joint '%s' has '%s' command interface found. '%s' or '%s' expected",
         joint.name.c_str(),
-        joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_POSITION_).name.c_str(),
-        HW_IF_POSITION);
+        joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_).name.c_str(),
+        HW_IF_POSITION,
+        HW_IF_EFFORT);
       return CallbackReturn::ERROR;
     }
 
@@ -212,12 +237,22 @@ TrossenArmHardwareInterface::export_command_interfaces()
 {
   std::vector<hardware_interface::CommandInterface> command_interfaces;
   for (size_t i = 0; i < info_.joints.size(); i++) {
-    // Position command interfaces
-    command_interfaces.emplace_back(
-      hardware_interface::CommandInterface(
-        info_.joints[i].name,
-        HW_IF_POSITION,
-        &joint_position_commands_[i]));
+    if (command_interface_ == HW_IF_POSITION) {
+        // Position command interfaces
+        command_interfaces.emplace_back(
+          hardware_interface::CommandInterface(
+            info_.joints[i].name,
+            HW_IF_POSITION,
+            &joint_position_commands_[i]));
+    }
+    if (command_interface_ == HW_IF_EFFORT) {
+        // Effort command interfaces
+        command_interfaces.emplace_back(
+          hardware_interface::CommandInterface(
+            info_.joints[i].name,
+            HW_IF_EFFORT,
+            &joint_torque_commands_[i]));
+    }
   }
   return command_interfaces;
 }
@@ -273,7 +308,13 @@ TrossenArmHardwareInterface::on_activate(const rclcpp_lifecycle::State & /*previ
 {
   first_update_ = true;
 
-  arm_driver_->set_all_modes(trossen_arm::Mode::position);
+  if (command_interface_ == HW_IF_POSITION){
+    arm_driver_->set_all_modes(trossen_arm::Mode::position);
+  }
+
+  if (command_interface_ == HW_IF_EFFORT) {
+    arm_driver_->set_all_modes(trossen_arm::Mode::external_effort);
+  }
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -282,13 +323,13 @@ TrossenArmHardwareInterface::on_activate(const rclcpp_lifecycle::State & /*previ
   // Validate position mode
   if (std::any_of(
       modes.begin(), modes.end(),
-      [](trossen_arm::Mode mode) {return mode != trossen_arm::Mode::position;}))
+      [](trossen_arm::Mode mode) {return (mode != trossen_arm::Mode::position && mode != trossen_arm::Mode::external_effort);}))
   {
-    std::string msg_modes = "Joint modes are not all position. Modes are: ";
+    std::string msg_modes = "Joint modes are not all position or external_effort. Modes are: ";
     for (auto mode : modes) {
       msg_modes += std::to_string(static_cast<int8_t>(mode)) + " ";
     }
-    RCLCPP_ERROR(get_logger(), msg_modes.c_str());
+    RCLCPP_ERROR(get_logger(), "%s", msg_modes.c_str());
     return CallbackReturn::ERROR;
   }
 
@@ -330,11 +371,12 @@ TrossenArmHardwareInterface::write(
       get_logger(),
       "First write update. Setting joint position commands to current positions.");
     joint_position_commands_ = joint_positions_;
+    std::fill(joint_torque_commands_.begin(), joint_torque_commands_.end(), 0);
     first_update_ = false;
   }
 
   // Validate that we are not sending NaN or INF values to the driver
-  if (std::any_of(
+  if (command_interface_ == HW_IF_POSITION && std::any_of(
       joint_position_commands_.begin(), joint_position_commands_.end(),
       [this](double position) {
         return std::isnan(position) || std::isinf(position);
@@ -342,11 +384,27 @@ TrossenArmHardwareInterface::write(
   {
     RCLCPP_ERROR(
       get_logger(),
-      "Commands to the joints contain NaN or INF values.");
+      "Position commands to the joints contain NaN or INF values.");
+    return return_type::ERROR;
+  }
+  if (command_interface_ == HW_IF_EFFORT && std::any_of(
+      joint_torque_commands_.begin(), joint_torque_commands_.end(),
+      [this](double torque) {
+        return std::isnan(torque) || std::isinf(torque);
+      }))
+  {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Torque commands to the joints contain NaN or INF values.");
     return return_type::ERROR;
   }
 
-  arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
+  if (command_interface_ == HW_IF_POSITION) {
+     arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
+  }
+  if (command_interface_ == HW_IF_EFFORT) {
+     arm_driver_->set_all_external_efforts(joint_torque_commands_, 0.0, false);
+  }
 
   return return_type::OK;
 }
