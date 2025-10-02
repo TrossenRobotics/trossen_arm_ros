@@ -70,9 +70,9 @@ public:
 
   CallbackReturn on_init(const HardwareInfo & info) override;
 
-  std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
+  std::vector<StateInterface> export_state_interfaces() override;
 
-  std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
+  std::vector<CommandInterface> export_command_interfaces() override;
 
   CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
@@ -85,6 +85,14 @@ public:
   return_type read(const rclcpp::Time & time, const rclcpp::Duration & duration) override;
 
   return_type write(const rclcpp::Time & time, const rclcpp::Duration & duration) override;
+
+  return_type prepare_command_mode_switch(
+    const std::vector<std::string>& start_interfaces,
+    const std::vector<std::string>& stop_interfaces) override;
+
+  return_type perform_command_mode_switch(
+    const std::vector<std::string>& start_interfaces,
+    const std::vector<std::string>& stop_interfaces) override;
 
 protected:
   // The driver for the robot
@@ -117,15 +125,31 @@ protected:
   // Joint position commands in radians for the arm and meters for the gripper
   std::vector<double> joint_position_commands_;
 
+  // Joint velocity commands in radians per second for the arm and meters per second for the gripper
+  std::vector<double> joint_velocity_commands_;
+
+  // Joint external effort commands in Nm for the arm and N for the gripper
+  std::vector<double> joint_effort_commands_;
+
   // Flag to indicate the first read/write update
   bool first_update_{true};
 
-  const size_t COUNT_COMMAND_INTERFACES_ = 1;  // position
+  const size_t COUNT_COMMAND_INTERFACES_ = 3;  // position, velocity, effort
   const size_t INDEX_COMMAND_INTERFACE_POSITION_ = 0;
+  const size_t INDEX_COMMAND_INTERFACE_VELOCITY_ = 1;
+  const size_t INDEX_COMMAND_INTERFACE_EFFORT_ = 2;
   const size_t COUNT_STATE_INTERFACES_ = 3;  // position, velocity, effort
   const size_t INDEX_STATE_INTERFACE_POSITION_ = 0;
   const size_t INDEX_STATE_INTERFACE_VELOCITY_ = 1;
   const size_t INDEX_STATE_INTERFACE_EFFORT_ = 2;
+
+  // Control mode flags
+  bool joint_position_mode_claimed_{false};
+  bool joint_velocity_mode_claimed_{false};
+  bool joint_effort_mode_claimed_{false};
+  bool joint_position_mode_running_{false};
+  bool joint_velocity_mode_running_{false};
+  bool joint_effort_mode_running_{false};
 
   // Logger
   static rclcpp::Logger get_logger()
