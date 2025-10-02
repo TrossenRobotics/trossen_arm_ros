@@ -93,6 +93,9 @@ protected:
   // Model of the robot this hardware interface connects to
   trossen_arm::Model robot_model_;
 
+  // String identifiying the desired control interface
+  std::string command_interface_;
+
   // End effector type of the robot this hardware interface connects to
   trossen_arm::EndEffector end_effector_;
 
@@ -117,11 +120,14 @@ protected:
   // Joint position commands in radians for the arm and meters for the gripper
   std::vector<double> joint_position_commands_;
 
+  // Joint torque commands in Nm for the arm
+  std::vector<double> joint_torque_commands_;
+
   // Flag to indicate the first read/write update
   bool first_update_{true};
 
   const size_t COUNT_COMMAND_INTERFACES_ = 1;  // position
-  const size_t INDEX_COMMAND_INTERFACE_POSITION_ = 0;
+  const size_t INDEX_COMMAND_INTERFACE_ = 0;
   const size_t COUNT_STATE_INTERFACES_ = 3;  // position, velocity, effort
   const size_t INDEX_STATE_INTERFACE_POSITION_ = 0;
   const size_t INDEX_STATE_INTERFACE_VELOCITY_ = 1;
