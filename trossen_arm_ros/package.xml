@@ -12,9 +12,9 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>trossen_arm_bringup</depend>
+  <depend>trossen_arm_controllers</depend>
   <depend>trossen_arm_hardware</depend>
   <depend>trossen_arm_moveit</depend>
-  <depend>trossen_arm_controllers</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
