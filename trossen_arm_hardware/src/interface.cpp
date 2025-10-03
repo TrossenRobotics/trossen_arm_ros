@@ -359,7 +359,7 @@ TrossenArmHardwareInterface::write(
     return return_type::ERROR;
     // arm_driver_->set_all_velocities(joint_velocity_commands_, 0.0,
   } else if (joint_effort_mode_running_) {
-    arm_driver_->set_all_efforts(joint_effort_commands_, 0.0, false);
+    arm_driver_->set_all_external_efforts(joint_effort_commands_, 0.0, false);
   }
 
   return return_type::OK;
@@ -509,6 +509,7 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     joint_position_mode_running_ = true;
     joint_velocity_mode_running_ = false;
     joint_effort_mode_running_ = false;
+    joint_position_commands_ = joint_positions_;
     try {
       arm_driver_->set_all_modes(trossen_arm::Mode::position);
     } catch (const std::exception & e) {
@@ -524,13 +525,14 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     joint_position_mode_running_ = false;
     joint_velocity_mode_running_ = false;
     joint_effort_mode_running_ = true;
+    std::fill(joint_effort_commands_.begin(), joint_effort_commands_.end(), 0.0);
     try {
-      arm_driver_->set_all_modes(trossen_arm::Mode::effort);
+      arm_driver_->set_all_modes(trossen_arm::Mode::external_effort);
     } catch (const std::exception & e) {
-      RCLCPP_ERROR(get_logger(), "Failed to set driver to effort mode: %s", e.what());
+      RCLCPP_ERROR(get_logger(), "Failed to set driver to external effort mode: %s", e.what());
       return return_type::ERROR;
     }
-    RCLCPP_INFO(get_logger(), "Switched to effort command mode.");
+    RCLCPP_INFO(get_logger(), "Switched to external effort command mode.");
   }
 
   // If no start interfaces provided we may just be stopping a mode
