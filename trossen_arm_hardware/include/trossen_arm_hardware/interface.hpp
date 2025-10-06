@@ -46,11 +46,11 @@
 namespace trossen_arm_hardware
 {
 
-static const char DRIVER_IP_ADDRESS_DEFAULT[] = "192.168.1.2";
+constexpr char DRIVER_IP_ADDRESS_DEFAULT[] = "192.168.1.2";
 
-static const char END_EFFECTOR_BASE[] = "base";
-static const char END_EFFECTOR_FOLLOWER[] = "follower";
-static const char END_EFFECTOR_LEADER[] = "leader";
+constexpr char END_EFFECTOR_BASE[] = "base";
+constexpr char END_EFFECTOR_FOLLOWER[] = "follower";
+constexpr char END_EFFECTOR_LEADER[] = "leader";
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 

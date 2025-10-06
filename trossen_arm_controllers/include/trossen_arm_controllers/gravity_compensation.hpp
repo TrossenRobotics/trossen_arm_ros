@@ -29,7 +29,11 @@
 #ifndef TROSSEN_ARM_CONTROLLERS__GRAVITY_COMPENSATION_HPP_
 #define TROSSEN_ARM_CONTROLLERS__GRAVITY_COMPENSATION_HPP_
 
+#include <string>
+#include <vector>
+
 #include "controller_interface/controller_interface.hpp"
+#include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
 
