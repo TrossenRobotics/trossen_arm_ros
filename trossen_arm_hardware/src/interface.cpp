@@ -352,13 +352,13 @@ TrossenArmHardwareInterface::write(
   }
 
   // Send the now validated commands to the driver
-  if (joint_position_mode_running_) {
+  if (arm_position_mode_running_) {
     arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
-  } else if (joint_velocity_mode_running_) {
+  } else if (arm_velocity_mode_running_) {
     RCLCPP_ERROR(get_logger(), "Velocity mode not implemented yet.");
     return return_type::ERROR;
     // arm_driver_->set_all_velocities(joint_velocity_commands_, 0.0,
-  } else if (joint_effort_mode_running_) {
+  } else if (arm_effort_mode_running_) {
     arm_driver_->set_all_external_efforts(joint_effort_commands_, 0.0, false);
   }
 
@@ -379,7 +379,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
   // Determine which single command interface type (position/velocity/effort) is requested
   std::string requested_interface_type;
   for (const auto & iface : start_interfaces) {
-    // Interface names generally look like `<joint_name>/<interface_type>`
+    // Interface names are in the format: `<joint_name>/<interface_type>`
     auto slash_pos = iface.rfind('/');
     std::string type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
 
@@ -399,66 +399,64 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
     }
   }
 
-  // Helper lambda to check if an interface type is present in the stop list
-  auto interface_type_in_stop = [&stop_interfaces](const std::string & type) -> bool {
-    for (const auto & iface : stop_interfaces) {
-      auto slash_pos = iface.rfind('/');
-      std::string stop_type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
-      if (stop_type == type) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   // Validate transitions. Only one control mode can be active at a time.
   // If a different mode is already running, its interfaces must be listed in stop_interfaces.
+
   if (requested_interface_type == HW_IF_POSITION) {
-    if (joint_position_mode_running_) {
+    // Validate position mode can be started - need to stop velocity, effort interfaces
+    if (arm_position_mode_running_) {
+      // No change needed
       RCLCPP_DEBUG(get_logger(), "Position mode already active. No change needed.");
       return return_type::OK;
     }
-    if (joint_velocity_mode_running_ && !interface_type_in_stop(HW_IF_VELOCITY)) {
+    if (arm_velocity_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_VELOCITY)) {
       RCLCPP_ERROR(
         get_logger(),
         "Velocity mode is active but not requested to stop before switching to position mode.");
       return return_type::ERROR;
     }
-    if (joint_effort_mode_running_ && !interface_type_in_stop(HW_IF_EFFORT)) {
+    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EFFORT)) {
       RCLCPP_ERROR(
         get_logger(),
         "Effort mode is active but not requested to stop before switching to position mode.");
       return return_type::ERROR;
     }
   } else if (requested_interface_type == HW_IF_VELOCITY) {
-    if (joint_velocity_mode_running_) {
+    // Validate velocity mode can be started - need to stop position, effort interfaces
+    if (arm_velocity_mode_running_) {
+      // No change needed
       RCLCPP_DEBUG(get_logger(), "Velocity mode already active. No change needed.");
       return return_type::OK;
     }
-    if (joint_position_mode_running_ && !interface_type_in_stop(HW_IF_POSITION)) {
+    if (arm_position_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_POSITION)) {
       RCLCPP_ERROR(
         get_logger(),
         "Position mode is active but not requested to stop before switching to velocity mode.");
       return return_type::ERROR;
     }
-    if (joint_effort_mode_running_ && !interface_type_in_stop(HW_IF_EFFORT)) {
+    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EFFORT)) {
       RCLCPP_ERROR(
         get_logger(),
         "Effort mode is active but not requested to stop before switching to velocity mode.");
       return return_type::ERROR;
     }
+    // TODO(lukeschmtit-tr): Velocity mode not implemented yet - handle at prepare
+    RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented.");
+    return return_type::ERROR;
   } else if (requested_interface_type == HW_IF_EFFORT) {
-    if (joint_effort_mode_running_) {
+    // Validate effort mode can be started - need to stop position, velocity interfaces
+    if (arm_effort_mode_running_) {
+      // No change needed
       RCLCPP_DEBUG(get_logger(), "Effort mode already active. No change needed.");
       return return_type::OK;
     }
-    if (joint_position_mode_running_ && !interface_type_in_stop(HW_IF_POSITION)) {
+    if (arm_position_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_POSITION)) {
       RCLCPP_ERROR(
         get_logger(),
         "Position mode is active but not requested to stop before switching to effort mode.");
       return return_type::ERROR;
     }
-    if (joint_velocity_mode_running_ && !interface_type_in_stop(HW_IF_VELOCITY)) {
+    if (arm_velocity_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_VELOCITY)) {
       RCLCPP_ERROR(
         get_logger(),
         "Velocity mode is active but not requested to stop before switching to effort mode.");
@@ -479,36 +477,26 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
   const std::vector<std::string> & start_interfaces,
   const std::vector<std::string> & stop_interfaces)
 {
-  // Determine which interface types are being stopped
-  auto interface_types_from_list = [](const std::vector<std::string> & ifaces) {
-    std::set<std::string> types;
-    for (const auto & iface : ifaces) {
-      auto slash_pos = iface.rfind('/');
-      std::string type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
-      types.insert(type);
-    }
-    return types;
-  };
-
+  // Determine which command interface types are being started and stopped
   auto stop_types = interface_types_from_list(stop_interfaces);
   auto start_types = interface_types_from_list(start_interfaces);
 
   // Stop requested modes
   if (stop_types.count(HW_IF_POSITION)) {
-    joint_position_mode_running_ = false;
+    arm_position_mode_running_ = false;
   }
   if (stop_types.count(HW_IF_VELOCITY)) {
-    joint_velocity_mode_running_ = false;
+    arm_velocity_mode_running_ = false;
   }
   if (stop_types.count(HW_IF_EFFORT)) {
-    joint_effort_mode_running_ = false;
+    arm_effort_mode_running_ = false;
   }
 
   // Start requested mode (only one should be present due to prepare validation)
   if (start_types.count(HW_IF_POSITION)) {
-    joint_position_mode_running_ = true;
-    joint_velocity_mode_running_ = false;
-    joint_effort_mode_running_ = false;
+    arm_position_mode_running_ = true;
+    arm_velocity_mode_running_ = false;
+    arm_effort_mode_running_ = false;
     joint_position_commands_ = joint_positions_;
     try {
       arm_driver_->set_all_modes(trossen_arm::Mode::position);
@@ -522,9 +510,9 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented.");
     return return_type::ERROR;
   } else if (start_types.count(HW_IF_EFFORT)) {
-    joint_position_mode_running_ = false;
-    joint_velocity_mode_running_ = false;
-    joint_effort_mode_running_ = true;
+    arm_position_mode_running_ = false;
+    arm_velocity_mode_running_ = false;
+    arm_effort_mode_running_ = true;
     std::fill(joint_effort_commands_.begin(), joint_effort_commands_.end(), 0.0);
     try {
       arm_driver_->set_all_modes(trossen_arm::Mode::external_effort);
@@ -537,7 +525,7 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
 
   // If no start interfaces provided we may just be stopping a mode
   if (start_types.empty()) {
-    if (!joint_position_mode_running_ && !joint_velocity_mode_running_ && !joint_effort_mode_running_) {
+    if (!arm_position_mode_running_ && !arm_velocity_mode_running_ && !arm_effort_mode_running_) {
       try {
         arm_driver_->set_all_modes(trossen_arm::Mode::idle);
       } catch (const std::exception & e) {
@@ -569,6 +557,32 @@ TrossenArmHardwareInterface::on_cleanup(const rclcpp_lifecycle::State & /*previo
 
   return CallbackReturn::SUCCESS;
 }
+
+bool
+TrossenArmHardwareInterface::interface_type_in_stop(
+  const std::vector<std::string> & stop_interfaces,
+  const std::string & type)
+{
+  for (const auto & iface : stop_interfaces) {
+    auto slash_pos = iface.rfind('/');
+    std::string stop_type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
+    if (stop_type == type) {
+      return true;
+    }
+  }
+  return false;
+}
+
+std::set<std::string>
+TrossenArmHardwareInterface::interface_types_from_list(const std::vector<std::string> & ifaces) {
+  std::set<std::string> types;
+  for (const auto & iface : ifaces) {
+    auto slash_pos = iface.rfind('/');
+    std::string type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
+    types.insert(type);
+  }
+  return types;
+};
 
 }  // namespace trossen_arm_hardware
 

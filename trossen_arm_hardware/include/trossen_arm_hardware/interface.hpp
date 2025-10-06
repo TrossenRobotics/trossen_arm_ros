@@ -144,18 +144,38 @@ protected:
   const size_t INDEX_STATE_INTERFACE_EFFORT_ = 2;
 
   // Control mode flags
-  bool joint_position_mode_claimed_{false};
-  bool joint_velocity_mode_claimed_{false};
-  bool joint_effort_mode_claimed_{false};
-  bool joint_position_mode_running_{false};
-  bool joint_velocity_mode_running_{false};
-  bool joint_effort_mode_running_{false};
+  bool arm_position_mode_running_{false};
+  bool arm_velocity_mode_running_{false};
+  bool arm_effort_mode_running_{false};
+  bool gripper_position_mode_running_{false};
+  bool gripper_velocity_mode_running_{false};
+  bool gripper_effort_mode_running_{false};
 
   // Logger
   static rclcpp::Logger get_logger()
   {
     return rclcpp::get_logger("trossen_arm_hardware");
   }
+
+  /**
+   * @brief Check if the interface type is in the stop interfaces
+   *
+   * @param stop_interfaces The interfaces to stop
+   * @param type The interface type to check
+   * @return true if the interface type is in the stop interfaces, false otherwise
+   */
+  bool interface_type_in_stop(
+    const std::vector<std::string> & stop_interfaces,
+    const std::string & type);
+
+  /**
+   * @brief Extract the interface types from a list of interfaces
+   *
+   * @param ifaces The list of interfaces
+   * @return A set of interface types
+   */
+  std::set<std::string> interface_types_from_list(const std::vector<std::string> & ifaces);
+
 };
 
 }  // namespace trossen_arm_hardware
