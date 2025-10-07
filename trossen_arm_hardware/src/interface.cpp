@@ -441,9 +441,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
   const std::vector<std::string> & start_interfaces,
   const std::vector<std::string> & stop_interfaces)
 {
-  bool requested_mode_change_arm = false;
-  bool requested_mode_change_gripper = false;
-
   // Differentiate between arm and gripper interfaces
   // Arm interfaces are all except the gripper joint index
   auto is_gripper_interface = [this](const std::string & iface) {
@@ -494,6 +491,16 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
       return return_type::ERROR;
     }
 
+    // Check that the joint exists
+    if (joint_name_to_index_.find(joint_name) == joint_name_to_index_.end()) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Unknown joint name '%s' in interface '%s'.",
+        joint_name.c_str(),
+        iface.c_str());
+      return return_type::ERROR;
+    }
+
     // Check that only one type is requested
     if (requested_interface_type_arm.empty()) {
       // If first type found, set it
@@ -532,6 +539,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
 
   // Validate transitions for the arm. Only one control mode can be active at a time.
   // If a different mode is already running, its interfaces must be listed in arm_stop_interfaces.
+
   // Stop-only transition (no new start interfaces for arm but an active mode is requested to stop)
   if (requested_interface_type_arm.empty() && !arm_stop_interfaces.empty()) {
     // Determine if current arm mode is being stopped without a replacement
@@ -542,7 +550,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
           get_logger(),
           "Arm stop-only transition requested for active mode '%s' (will go idle).",
           current_type.c_str());
-        requested_mode_change_arm = true;
       }
     }
   }
@@ -552,7 +559,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
       case CommandMode::POSITION: {
         // No change needed
         RCLCPP_DEBUG(get_logger(), "Arm position mode already active. No change needed.");
-        break;  // Continue validating gripper
+        break;
 
       }
       case CommandMode::VELOCITY: {
@@ -562,7 +569,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Velocity mode is active but not requested to stop before switching to position mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_arm = true;
         break;
       }
       case CommandMode::EFFORT: {
@@ -572,7 +578,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Effort mode is active but not requested to stop before switching to position mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_arm = true;
         break;
       }
     }
@@ -591,7 +596,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Position mode is active but not requested to stop before switching to velocity mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_arm = true;
         break;
       }
       case CommandMode::EFFORT: {
@@ -601,7 +605,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Effort mode is active but not requested to stop before switching to velocity mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_arm = true;
         break;
       }
     }
@@ -623,7 +626,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Arm position mode is active but not requested to stop before switching to effort mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_arm = true;
         break;
       }
       case CommandMode::VELOCITY: {
@@ -633,19 +635,14 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Arm velocity mode is active but not requested to stop before switching to effort mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_arm = true;
         break;
       }
     }
   }
 
-  RCLCPP_DEBUG(
-    get_logger(),
-    "Arm mode change requested: %s",
-    requested_mode_change_arm ? "true" : "false");
-
   // Validate transitions for the gripper. Only one control mode can be active at a time.
   // If a different mode is already running, its interfaces must be listed in gripper_stop_interfaces.
+
   // Stop-only transition (no new start interface for gripper but an active mode is requested to stop)
   if (requested_interface_type_gripper.empty() && !gripper_stop_interfaces.empty()) {
     std::string current_type = hardware_type_from_command_mode(arm_mode_);
@@ -655,7 +652,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
           get_logger(),
           "Gripper stop-only transition requested for active mode '%s' (will go idle).",
           current_type.c_str());
-        requested_mode_change_gripper = true;
       }
     }
   }
@@ -665,7 +661,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
       case CommandMode::POSITION: {
         // No change needed
         RCLCPP_DEBUG(get_logger(), "Gripper position mode already active. No change needed.");
-        break;  // Allow arm validation to continue
+        break;
       }
       case CommandMode::VELOCITY: {
         if (!interface_type_in_stop(gripper_stop_interfaces, HW_IF_VELOCITY)) {
@@ -674,7 +670,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Gripper velocity mode is active but not requested to stop before switching to position mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_gripper = true;
         break;
       }
       case CommandMode::EFFORT: {
@@ -684,7 +679,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Gripper effort mode is active but not requested to stop before switching to position mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_gripper = true;
         break;
       }
     }
@@ -703,7 +697,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Gripper position mode is active but not requested to stop before switching to velocity mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_gripper = true;
         break;
       }
       case CommandMode::EFFORT: {
@@ -713,7 +706,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Gripper effort mode is active but not requested to stop before switching to velocity mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_gripper = true;
         break;
       }
     }
@@ -732,7 +724,6 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Gripper position mode is active but not requested to stop before switching to effort mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_gripper = true;
         break;
       }
       case CommandMode::VELOCITY: {
@@ -742,17 +733,19 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
             "Gripper velocity mode is active but not requested to stop before switching to effort mode.");
           return return_type::ERROR;
         }
-        requested_mode_change_gripper = true;
         break;
       }
     }
   }
 
-  RCLCPP_DEBUG(
-    get_logger(),
-    "Gripper mode change requested: %s",
-    requested_mode_change_gripper ? "true" : "false");
-
+  // At this point we have validated:
+  // - Only one command interface type is being requested for the arm
+  // - The requested command interface type is valid given the current arm mode and any requested
+  //   stop interfaces
+  // - Only one command interface type is being requested for the gripper
+  // - The requested command interface type is valid given the current gripper mode and any
+  //   requested stop interfaces
+  // We can now proceed to perform the command mode switch for the arm and gripper separately
   return return_type::OK;
 }
 
