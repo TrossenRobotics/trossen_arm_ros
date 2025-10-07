@@ -219,6 +219,25 @@ protected:
     std::string & joint_name,
     std::string & type);
 
+  /**
+   * @brief Get the hardware interface type string from the command mode
+   *
+   * @param mode The command mode
+   * @return The hardware interface type string
+   */
+  const std::string hardware_type_from_command_mode(CommandMode mode) {
+    switch (mode) {
+      case CommandMode::POSITION:
+        return HW_IF_POSITION;
+      case CommandMode::VELOCITY:
+        return HW_IF_VELOCITY;
+      case CommandMode::EFFORT:
+        return HW_IF_EFFORT;
+      case CommandMode::IDLE:
+      default:
+        return "";
+    }
+  }
 };
 
 }  // namespace trossen_arm_hardware

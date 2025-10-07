@@ -532,12 +532,26 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
 
   // Validate transitions for the arm. Only one control mode can be active at a time.
   // If a different mode is already running, its interfaces must be listed in arm_stop_interfaces.
+  // Stop-only transition (no new start interfaces for arm but an active mode is requested to stop)
+  if (requested_interface_type_arm.empty() && !arm_stop_interfaces.empty()) {
+    // Determine if current arm mode is being stopped without a replacement
+    std::string current_type = hardware_type_from_command_mode(arm_mode_);
+    if (!current_type.empty()) {
+      if (interface_type_in_stop(arm_stop_interfaces, current_type)) {
+        RCLCPP_DEBUG(
+          get_logger(),
+          "Arm stop-only transition requested for active mode '%s' (will go idle).",
+          current_type.c_str());
+        requested_mode_change_arm = true;
+      }
+    }
+  }
   if (requested_interface_type_arm == HW_IF_POSITION) {
     // Validate position mode can be started - need to stop velocity, effort interfaces
     switch (arm_mode_) {
       case CommandMode::POSITION: {
         // No change needed
-        RCLCPP_DEBUG(get_logger(), "[prepare] Arm position mode already active. No change needed.");
+        RCLCPP_DEBUG(get_logger(), "Arm position mode already active. No change needed.");
         break;  // Continue validating gripper
 
       }
@@ -632,6 +646,19 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
 
   // Validate transitions for the gripper. Only one control mode can be active at a time.
   // If a different mode is already running, its interfaces must be listed in gripper_stop_interfaces.
+  // Stop-only transition (no new start interface for gripper but an active mode is requested to stop)
+  if (requested_interface_type_gripper.empty() && !gripper_stop_interfaces.empty()) {
+    std::string current_type = hardware_type_from_command_mode(arm_mode_);
+    if (!current_type.empty()) {
+      if (interface_type_in_stop(gripper_stop_interfaces, current_type)) {
+        RCLCPP_DEBUG(
+          get_logger(),
+          "Gripper stop-only transition requested for active mode '%s' (will go idle).",
+          current_type.c_str());
+        requested_mode_change_gripper = true;
+      }
+    }
+  }
   if (requested_interface_type_gripper == HW_IF_POSITION) {
     // Validate position mode can be started - need to stop velocity, effort interfaces
     switch (gripper_mode_) {
