@@ -45,8 +45,8 @@ def main(args=None):
 
     arm_target_position = [0.0, math.pi / 2.0, math.pi / 2.0, 0.0, 0.0, 0.0]  # upright position
     arm_home_position = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-    gripper_opening_effort = 10.0  # N
-    gripper_closing_effort = -10.0  # N
+    gripper_opening_effort = 25.0  # N
+    gripper_closing_effort = -25.0  # N
 
     # Send to target position
     arm.get_logger().info('Sending arm to target position...')
