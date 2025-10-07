@@ -245,7 +245,7 @@ protected:
    * @param iface The interface to check
    * @return true if the interface is a gripper interface, false otherwise
    */
-  bool TrossenArmHardwareInterface::is_gripper_interface(const std::string & iface);
+  bool is_gripper_interface(const std::string & iface);
 };
 
 }  // namespace trossen_arm_hardware
