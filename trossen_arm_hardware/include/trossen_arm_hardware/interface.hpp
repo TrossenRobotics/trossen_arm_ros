@@ -110,6 +110,12 @@ protected:
   // IP address of the driver this hardware interface connects to
   std::string driver_ip_address_{DRIVER_IP_ADDRESS_DEFAULT};
 
+  // Index of the gripper joint in the joint arrays
+  int gripper_joint_index_;
+
+  // Map from joint name to its index in the joint arrays
+  std::unordered_map<std::string, int> joint_name_to_index_;
+
   // Robot output structure to hold the robot's state
   trossen_arm::RobotOutput robot_output_;
 
@@ -143,13 +149,24 @@ protected:
   const size_t INDEX_STATE_INTERFACE_VELOCITY_ = 1;
   const size_t INDEX_STATE_INTERFACE_EFFORT_ = 2;
 
-  // Control mode flags
-  bool arm_position_mode_running_{false};
-  bool arm_velocity_mode_running_{false};
-  bool arm_effort_mode_running_{false};
-  bool gripper_position_mode_running_{false};
-  bool gripper_velocity_mode_running_{false};
-  bool gripper_effort_mode_running_{false};
+  /// @brief Control mode flags
+  enum class CommandMode {
+    /// @brief No command mode - mapped to idle
+    IDLE,
+
+    /// @brief Position control mode
+    POSITION,
+
+    /// @brief Velocity control mode
+    VELOCITY,
+
+    /// @brief Effort control mode - mapped to external effort for the arm and effort for the
+    /// gripper
+    EFFORT
+  };
+
+  CommandMode arm_mode_{CommandMode::IDLE};
+  CommandMode gripper_mode_{CommandMode::IDLE};
 
   // Logger
   static rclcpp::Logger get_logger()
@@ -175,6 +192,32 @@ protected:
    * @return A set of interface types
    */
   std::set<std::string> interface_types_from_list(const std::vector<std::string> & ifaces);
+
+  /**
+   * @brief Split an interface string into joint name and interface type
+   *
+   * @param iface The interface string to split
+   * @param[out] joint_name The output joint name
+   * @param[out] type The output interface type
+   * @return true if the interface string was successfully split, false otherwise
+   */
+  bool parse_interface(
+    const std::string & iface,
+    std::string & joint_name,
+    std::string & type);
+
+  /**
+   * @brief Validate that the command interface
+   *
+   * @param iface The interface to validate
+   * @param[out] joint_name The joint name extracted from the interface
+   * @param[out] type The interface type extracted from the interface
+   * @return true if the interface type is supported, false otherwise
+   */
+  bool validate_command_interface(
+    const std::string & iface,
+    std::string & joint_name,
+    std::string & type);
 
 };
 

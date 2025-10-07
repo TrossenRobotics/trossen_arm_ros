@@ -99,6 +99,38 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     driver_ip_address_ = DRIVER_IP_ADDRESS_DEFAULT;
   }
 
+  // Get the gripper joint index, default to the last joint if not specified
+  // TODO(lukeschmitt-tr): Handle no or custom gripper cases
+  try {
+    gripper_joint_index_ = std::stoi(info.hardware_parameters.at("gripper_joint_index"));
+    // Validatet the index
+    if (gripper_joint_index_ < 0 || gripper_joint_index_ >= static_cast<int>(info_.joints.size())) {
+      RCLCPP_FATAL(
+        get_logger(),
+        "Invalid 'gripper_joint_index' value specified: '%d'. Must be between 0 and %zu.",
+        gripper_joint_index_,
+        info_.joints.size() - 1);
+      return CallbackReturn::FAILURE;
+    }
+    RCLCPP_INFO(
+      get_logger(),
+      "Parameter 'gripper_joint_index' set to '%d'.",
+      gripper_joint_index_);
+  } catch (const std::out_of_range & /*e*/) {
+    // Default to the last joint
+    gripper_joint_index_ = static_cast<int>(info_.joints.size()) - 1;
+    RCLCPP_WARN(
+      get_logger(),
+      "Parameter 'gripper_joint_index' not specified. Defaulting to last joint: '%d'.",
+      gripper_joint_index_);
+  } catch (const std::invalid_argument & /*e*/) {
+    RCLCPP_FATAL(
+      get_logger(),
+      "Invalid 'gripper_joint_index' value specified: '%s'.",
+      info.hardware_parameters.at("gripper_joint_index").c_str());
+    return CallbackReturn::FAILURE;
+  }
+
   // Joint state interfaces
   joint_positions_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_velocities_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
@@ -199,6 +231,11 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
         HW_IF_EFFORT);
       return CallbackReturn::ERROR;
     }
+  }
+
+  // Build the joint name to index map
+  for (size_t i = 0; i < info_.joints.size(); ++i) {
+    joint_name_to_index_[info_.joints[i].name] = i;
   }
 
   return CallbackReturn::SUCCESS;
@@ -351,15 +388,49 @@ TrossenArmHardwareInterface::write(
     first_update_ = false;
   }
 
-  // Send the now validated commands to the driver
-  if (arm_position_mode_running_) {
-    arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
-  } else if (arm_velocity_mode_running_) {
-    RCLCPP_ERROR(get_logger(), "Velocity mode not implemented yet.");
-    return return_type::ERROR;
-    // arm_driver_->set_all_velocities(joint_velocity_commands_, 0.0,
-  } else if (arm_effort_mode_running_) {
-    arm_driver_->set_all_external_efforts(joint_effort_commands_, 0.0, false);
+  // TODO(lukeschmitt-tr): Validate commands against NaN and inf
+
+  // Send the arm commands to the driver
+  switch (arm_mode_){
+    case CommandMode::POSITION: {
+      std::vector<double> arm_position_commands(
+        joint_position_commands_.begin(),
+        joint_position_commands_.begin() + gripper_joint_index_);
+      arm_driver_->set_arm_positions(arm_position_commands, 0.0, false);
+      break;
+    };
+    case CommandMode::VELOCITY: {
+      RCLCPP_ERROR(get_logger(), "Velocity mode not implemented yet.");
+      return return_type::ERROR;
+      break;
+    };
+    case CommandMode::EFFORT: {
+      std::vector<double> arm_external_effort_commands(
+        joint_effort_commands_.begin(),
+        joint_effort_commands_.begin() + gripper_joint_index_);
+      arm_driver_->set_arm_external_efforts(arm_external_effort_commands, 0.0, false);
+      break;
+    };
+  }
+
+  // Send the gripper commands to the driver
+  switch (gripper_mode_) {
+    case CommandMode::POSITION: {
+      arm_driver_->set_gripper_position(
+        joint_position_commands_.at(gripper_joint_index_), 0.0, false);
+      break;
+    }
+    case CommandMode::VELOCITY: {
+      arm_driver_->set_gripper_velocity(
+        joint_velocity_commands_.at(gripper_joint_index_), 0.0, false);
+      break;
+    }
+    case CommandMode::EFFORT: {
+      // Effort is used directly for the gripper's effort mode
+      arm_driver_->set_gripper_effort(
+        joint_effort_commands_.at(gripper_joint_index_), 0.0, false);
+      break;
+    }
   }
 
   return return_type::OK;
@@ -370,104 +441,290 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
   const std::vector<std::string> & start_interfaces,
   const std::vector<std::string> & stop_interfaces)
 {
-  // If nothing new requested, nothing to validate
-  if (start_interfaces.empty()) {
-    RCLCPP_DEBUG(get_logger(), "No start interfaces requested. Nothing to prepare.");
-    return return_type::OK;
-  }
+  bool requested_mode_change_arm = false;
+  bool requested_mode_change_gripper = false;
 
-  // Determine which single command interface type (position/velocity/effort) is requested
-  std::string requested_interface_type;
-  for (const auto & iface : start_interfaces) {
-    // Interface names are in the format: `<joint_name>/<interface_type>`
+  // Differentiate between arm and gripper interfaces
+  // Arm interfaces are all except the gripper joint index
+  auto is_gripper_interface = [this](const std::string & iface) {
     auto slash_pos = iface.rfind('/');
-    std::string type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
+    std::string joint_name = (slash_pos == std::string::npos) ? iface : iface.substr(0, slash_pos);
+    auto it = joint_name_to_index_.find(joint_name);
+    if (it == joint_name_to_index_.end()) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Unknown joint name '%s' in interface '%s'.",
+        joint_name.c_str(),
+        iface.c_str());
+      return false;
+    }
+    return it->second == gripper_joint_index_;
+  };
 
-    if (type != HW_IF_POSITION && type != HW_IF_VELOCITY && type != HW_IF_EFFORT) {
-      RCLCPP_ERROR(get_logger(), "Unsupported command interface '%s' requested.", type.c_str());
+  // Get the start and stop interfaces for the arm and gripper separately
+  std::vector<std::string> arm_start_interfaces;
+  std::vector<std::string> gripper_start_interfaces;
+  for (const auto & iface : start_interfaces) {
+    if (is_gripper_interface(iface)) {
+      gripper_start_interfaces.push_back(iface);
+    } else {
+      arm_start_interfaces.push_back(iface);
+    }
+  }
+  std::vector<std::string> arm_stop_interfaces;
+  std::vector<std::string> gripper_stop_interfaces;
+  for (const auto & iface : stop_interfaces) {
+    if (is_gripper_interface(iface)) {
+      gripper_stop_interfaces.push_back(iface);
+    } else {
+      arm_stop_interfaces.push_back(iface);
+    }
+  }
+
+  // Determine which single command interface type (position/velocity/effort) is requested for the
+  // joints in the arm. If multiple types are requested for joints in the arm, return an error.
+  std::string requested_interface_type_arm;
+  for (const auto & iface : arm_start_interfaces) {
+    std::string joint_name, type;
+    if (!validate_command_interface(iface, joint_name, type)) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Invalid interface name '%s' requested.",
+        iface.c_str());
       return return_type::ERROR;
     }
 
-    if (requested_interface_type.empty()) {
-      requested_interface_type = type;
-    } else if (requested_interface_type != type) {
+    // Check that only one type is requested
+    if (requested_interface_type_arm.empty()) {
+      // If first type found, set it
+      requested_interface_type_arm = type;
+    } else if (requested_interface_type_arm != type) {
+      // Error if different type found than first type
       RCLCPP_ERROR(
         get_logger(),
-        "Mixed command interface types requested in a single mode switch: '%s' and '%s'.",
-        requested_interface_type.c_str(), type.c_str());
+        "Mixed command interface types requested in a single mode switch for the arm: '%s' and '%s'.",
+        requested_interface_type_arm.c_str(), type.c_str());
       return return_type::ERROR;
     }
   }
 
-  // Validate transitions. Only one control mode can be active at a time.
-  // If a different mode is already running, its interfaces must be listed in stop_interfaces.
+  // Determine which command interface type (position/velocity/effort) is requested for the gripper
+  // joint. If multiple types are requested for the gripper joint, return an error.
+  std::string requested_interface_type_gripper;
+  if (gripper_start_interfaces.size() > 1) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Multiple command interfaces requested for the gripper joint. Only one can be active at a time.");
+    return return_type::ERROR;
+  }
+  if (!gripper_start_interfaces.empty()) {
+    std::string requested_interface_gripper = gripper_start_interfaces.front();
+    std::string joint_name, type;
+    if (!validate_command_interface(requested_interface_gripper, joint_name, type)) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Invalid interface name '%s' requested.",
+        requested_interface_gripper.c_str());
+      return return_type::ERROR;
+    }
+    requested_interface_type_gripper = type;
+  }
 
-  if (requested_interface_type == HW_IF_POSITION) {
+  // Validate transitions for the arm. Only one control mode can be active at a time.
+  // If a different mode is already running, its interfaces must be listed in arm_stop_interfaces.
+  if (requested_interface_type_arm == HW_IF_POSITION) {
     // Validate position mode can be started - need to stop velocity, effort interfaces
-    if (arm_position_mode_running_) {
-      // No change needed
-      RCLCPP_DEBUG(get_logger(), "Position mode already active. No change needed.");
-      return return_type::OK;
+    switch (arm_mode_) {
+      case CommandMode::POSITION: {
+        // No change needed
+        RCLCPP_DEBUG(get_logger(), "[prepare] Arm position mode already active. No change needed.");
+        break;  // Continue validating gripper
+
+      }
+      case CommandMode::VELOCITY: {
+        if (!interface_type_in_stop(arm_stop_interfaces, HW_IF_VELOCITY)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Velocity mode is active but not requested to stop before switching to position mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_arm = true;
+        break;
+      }
+      case CommandMode::EFFORT: {
+        if (!interface_type_in_stop(arm_stop_interfaces, HW_IF_EFFORT)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Effort mode is active but not requested to stop before switching to position mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_arm = true;
+        break;
+      }
     }
-    if (arm_velocity_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_VELOCITY)) {
-      RCLCPP_ERROR(
-        get_logger(),
-        "Velocity mode is active but not requested to stop before switching to position mode.");
-      return return_type::ERROR;
-    }
-    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EFFORT)) {
-      RCLCPP_ERROR(
-        get_logger(),
-        "Effort mode is active but not requested to stop before switching to position mode.");
-      return return_type::ERROR;
-    }
-  } else if (requested_interface_type == HW_IF_VELOCITY) {
+  } else if (requested_interface_type_arm == HW_IF_VELOCITY) {
     // Validate velocity mode can be started - need to stop position, effort interfaces
-    if (arm_velocity_mode_running_) {
-      // No change needed
-      RCLCPP_DEBUG(get_logger(), "Velocity mode already active. No change needed.");
-      return return_type::OK;
-    }
-    if (arm_position_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_POSITION)) {
-      RCLCPP_ERROR(
-        get_logger(),
-        "Position mode is active but not requested to stop before switching to velocity mode.");
-      return return_type::ERROR;
-    }
-    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EFFORT)) {
-      RCLCPP_ERROR(
-        get_logger(),
-        "Effort mode is active but not requested to stop before switching to velocity mode.");
-      return return_type::ERROR;
+    switch (arm_mode_) {
+      case CommandMode::VELOCITY: {
+        // No change needed
+        RCLCPP_DEBUG(get_logger(), "Arm velocity mode already active. No change needed.");
+        break;
+      }
+      case CommandMode::POSITION: {
+        if (!interface_type_in_stop(arm_stop_interfaces, HW_IF_POSITION)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Position mode is active but not requested to stop before switching to velocity mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_arm = true;
+        break;
+      }
+      case CommandMode::EFFORT: {
+        if (!interface_type_in_stop(arm_stop_interfaces, HW_IF_EFFORT)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Effort mode is active but not requested to stop before switching to velocity mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_arm = true;
+        break;
+      }
     }
     // TODO(lukeschmtit-tr): Velocity mode not implemented yet - handle at prepare
     RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented.");
     return return_type::ERROR;
-  } else if (requested_interface_type == HW_IF_EFFORT) {
+  } else if (requested_interface_type_arm == HW_IF_EFFORT) {
     // Validate effort mode can be started - need to stop position, velocity interfaces
-    if (arm_effort_mode_running_) {
-      // No change needed
-      RCLCPP_DEBUG(get_logger(), "Effort mode already active. No change needed.");
-      return return_type::OK;
-    }
-    if (arm_position_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_POSITION)) {
-      RCLCPP_ERROR(
-        get_logger(),
-        "Position mode is active but not requested to stop before switching to effort mode.");
-      return return_type::ERROR;
-    }
-    if (arm_velocity_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_VELOCITY)) {
-      RCLCPP_ERROR(
-        get_logger(),
-        "Velocity mode is active but not requested to stop before switching to effort mode.");
-      return return_type::ERROR;
+    switch (arm_mode_) {
+      case CommandMode::EFFORT: {
+        // No change needed
+        RCLCPP_DEBUG(get_logger(), "Arm effort mode already active. No change needed.");
+        break;
+      }
+      case CommandMode::POSITION: {
+        if (!interface_type_in_stop(arm_stop_interfaces, HW_IF_POSITION)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Arm position mode is active but not requested to stop before switching to effort mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_arm = true;
+        break;
+      }
+      case CommandMode::VELOCITY: {
+        if (!interface_type_in_stop(arm_stop_interfaces, HW_IF_VELOCITY)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Arm velocity mode is active but not requested to stop before switching to effort mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_arm = true;
+        break;
+      }
     }
   }
 
   RCLCPP_DEBUG(
     get_logger(),
-    "Command mode switch preparation successful. New mode requested: '%s'.",
-    requested_interface_type.c_str());
+    "Arm mode change requested: %s",
+    requested_mode_change_arm ? "true" : "false");
+
+  // Validate transitions for the gripper. Only one control mode can be active at a time.
+  // If a different mode is already running, its interfaces must be listed in gripper_stop_interfaces.
+  if (requested_interface_type_gripper == HW_IF_POSITION) {
+    // Validate position mode can be started - need to stop velocity, effort interfaces
+    switch (gripper_mode_) {
+      case CommandMode::POSITION: {
+        // No change needed
+        RCLCPP_DEBUG(get_logger(), "Gripper position mode already active. No change needed.");
+        break;  // Allow arm validation to continue
+      }
+      case CommandMode::VELOCITY: {
+        if (!interface_type_in_stop(gripper_stop_interfaces, HW_IF_VELOCITY)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Gripper velocity mode is active but not requested to stop before switching to position mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_gripper = true;
+        break;
+      }
+      case CommandMode::EFFORT: {
+        if (!interface_type_in_stop(gripper_stop_interfaces, HW_IF_EFFORT)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Gripper effort mode is active but not requested to stop before switching to position mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_gripper = true;
+        break;
+      }
+    }
+  } else if (requested_interface_type_gripper == HW_IF_VELOCITY) {
+    // Validate velocity mode can be started - need to stop position, effort interfaces
+    switch (gripper_mode_) {
+      case CommandMode::VELOCITY: {
+        // No change needed
+        RCLCPP_DEBUG(get_logger(), "Gripper velocity mode already active. No change needed.");
+        break;
+      }
+      case CommandMode::POSITION: {
+        if (!interface_type_in_stop(gripper_stop_interfaces, HW_IF_POSITION)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Gripper position mode is active but not requested to stop before switching to velocity mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_gripper = true;
+        break;
+      }
+      case CommandMode::EFFORT: {
+        if (!interface_type_in_stop(gripper_stop_interfaces, HW_IF_EFFORT)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Gripper effort mode is active but not requested to stop before switching to velocity mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_gripper = true;
+        break;
+      }
+    }
+  } else if (requested_interface_type_gripper == HW_IF_EFFORT) {
+    // Validate effort mode can be started - need to stop position, velocity interfaces
+    switch (gripper_mode_) {
+      case CommandMode::EFFORT: {
+        // No change needed
+        RCLCPP_DEBUG(get_logger(), "Gripper effort mode already active. No change needed.");
+        break;
+      }
+      case CommandMode::POSITION: {
+        if (!interface_type_in_stop(gripper_stop_interfaces, HW_IF_POSITION)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Gripper position mode is active but not requested to stop before switching to effort mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_gripper = true;
+        break;
+      }
+      case CommandMode::VELOCITY: {
+        if (!interface_type_in_stop(gripper_stop_interfaces, HW_IF_VELOCITY)) {
+          RCLCPP_ERROR(
+            get_logger(),
+            "Gripper velocity mode is active but not requested to stop before switching to effort mode.");
+          return return_type::ERROR;
+        }
+        requested_mode_change_gripper = true;
+        break;
+      }
+    }
+  }
+
+  RCLCPP_DEBUG(
+    get_logger(),
+    "Gripper mode change requested: %s",
+    requested_mode_change_gripper ? "true" : "false");
 
   return return_type::OK;
 }
@@ -481,22 +738,9 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
   auto stop_types = interface_types_from_list(stop_interfaces);
   auto start_types = interface_types_from_list(start_interfaces);
 
-  // Stop requested modes
-  if (stop_types.count(HW_IF_POSITION)) {
-    arm_position_mode_running_ = false;
-  }
-  if (stop_types.count(HW_IF_VELOCITY)) {
-    arm_velocity_mode_running_ = false;
-  }
-  if (stop_types.count(HW_IF_EFFORT)) {
-    arm_effort_mode_running_ = false;
-  }
-
   // Start requested mode (only one should be present due to prepare validation)
   if (start_types.count(HW_IF_POSITION)) {
-    arm_position_mode_running_ = true;
-    arm_velocity_mode_running_ = false;
-    arm_effort_mode_running_ = false;
+    arm_mode_ = CommandMode::POSITION;
     joint_position_commands_ = joint_positions_;
     try {
       arm_driver_->set_all_modes(trossen_arm::Mode::position);
@@ -510,9 +754,7 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented.");
     return return_type::ERROR;
   } else if (start_types.count(HW_IF_EFFORT)) {
-    arm_position_mode_running_ = false;
-    arm_velocity_mode_running_ = false;
-    arm_effort_mode_running_ = true;
+    arm_mode_ = CommandMode::EFFORT;
     std::fill(joint_effort_commands_.begin(), joint_effort_commands_.end(), 0.0);
     try {
       arm_driver_->set_all_modes(trossen_arm::Mode::external_effort);
@@ -525,7 +767,11 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
 
   // If no start interfaces provided we may just be stopping a mode
   if (start_types.empty()) {
-    if (!arm_position_mode_running_ && !arm_velocity_mode_running_ && !arm_effort_mode_running_) {
+    if (
+      arm_mode_ != CommandMode::POSITION
+      && arm_mode_ != CommandMode::VELOCITY
+      && arm_mode_ != CommandMode::EFFORT)
+    {
       try {
         arm_driver_->set_all_modes(trossen_arm::Mode::idle);
       } catch (const std::exception & e) {
@@ -558,6 +804,25 @@ TrossenArmHardwareInterface::on_cleanup(const rclcpp_lifecycle::State & /*previo
   return CallbackReturn::SUCCESS;
 }
 
+bool TrossenArmHardwareInterface::parse_interface(
+    const std::string & iface,
+    std::string & joint_name,
+    std::string & type)
+{
+  // Interface names are in the format: `<joint_name>/<interface_type>`
+  auto slash_pos = iface.rfind('/');
+  if (slash_pos == std::string::npos) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Invalid interface format '%s'. Expected '<joint_name>/<type>'.",
+      iface.c_str());
+    return false;
+  }
+  joint_name = iface.substr(0, slash_pos);
+  type = iface.substr(slash_pos + 1);
+  return true;
+}
+
 bool
 TrossenArmHardwareInterface::interface_type_in_stop(
   const std::vector<std::string> & stop_interfaces,
@@ -583,6 +848,40 @@ TrossenArmHardwareInterface::interface_types_from_list(const std::vector<std::st
   }
   return types;
 };
+
+bool TrossenArmHardwareInterface::validate_command_interface(
+    const std::string & iface,
+    std::string & joint_name,
+    std::string & type)
+{
+  // Validate strucutre of interface
+  if (!parse_interface(iface, joint_name, type)) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Invalid interface name '%s' requested.",
+      iface.c_str());
+    return false;
+  }
+  // Validate type
+  if (type != HW_IF_POSITION && type != HW_IF_VELOCITY && type != HW_IF_EFFORT) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Unsupported command interface '%s' requested.",
+      type.c_str());
+    return false;
+  }
+  // Validate joint name
+  auto it = joint_name_to_index_.find(joint_name);
+  if (it == joint_name_to_index_.end()) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Unknown joint name '%s' in interface '%s'.",
+      joint_name.c_str(),
+      iface.c_str());
+    return false;
+  }
+  return true;
+}
 
 }  // namespace trossen_arm_hardware
 
