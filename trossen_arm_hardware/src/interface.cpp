@@ -26,6 +26,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <algorithm>
+
 #include "trossen_arm_hardware/interface.hpp"
 
 namespace trossen_arm_hardware
@@ -745,17 +747,37 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
 return_type
 TrossenArmHardwareInterface::perform_command_mode_switch(
   const std::vector<std::string> & start_interfaces,
-  const std::vector<std::string> & /*stop_interfaces*/)
+  const std::vector<std::string> & stop_interfaces)
 {
   // Differentiate between arm and gripper interfaces
   // We expect only one type for each, but use sets to be safe
   std::set<std::string> arm_start_types;
   std::set<std::string> gripper_start_types;
-  for (const auto & type : start_interfaces) {
-    if (is_gripper_interface(type)) {
+  for (const auto & iface : start_interfaces) {
+    std::string joint_name, type;
+    if (!validate_command_interface(iface, joint_name, type)) {
+      RCLCPP_ERROR(get_logger(), "Invalid start interface name '%s' requested.", iface.c_str());
+      return return_type::ERROR;
+    }
+    if (is_gripper_interface(iface)) {
       gripper_start_types.insert(type);
     } else {
       arm_start_types.insert(type);
+    }
+  }
+
+  std::set<std::string> arm_stop_types;
+  std::set<std::string> gripper_stop_types;
+  for (const auto & iface : stop_interfaces) {
+    std::string joint_name, type;
+    if (!validate_command_interface(iface, joint_name, type)) {
+      RCLCPP_ERROR(get_logger(), "Invalid stop interface name '%s' requested.", iface.c_str());
+      return return_type::ERROR;
+    }
+    if (is_gripper_interface(iface)) {
+      gripper_stop_types.insert(type);
+    } else {
+      arm_stop_types.insert(type);
     }
   }
 
@@ -769,9 +791,10 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
   if (arm_start_types.count(HW_IF_POSITION)) {
     arm_mode_ = CommandMode::POSITION;
     // Set arm joint position commands to current arm joint positions to prevent jumps
-    joint_position_commands_.assign(
+    std::copy(
       joint_positions_.begin(),
-      joint_positions_.begin() + gripper_joint_index_);
+      joint_positions_.begin() + gripper_joint_index_,
+      joint_position_commands_.begin());
     try {
       arm_driver_->set_arm_modes(trossen_arm::Mode::position);
     } catch (const std::exception & e) {
@@ -798,8 +821,8 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     }
     RCLCPP_INFO(get_logger(), "Switched to external effort command mode for the arm.");
   }
-  // If no arm start interfaces provided we may just be stopping a mode
-  if (arm_start_types.empty()) {
+  // If no arm start interfaces provided and arm stop interfaces provided, go to idle
+  if (arm_start_types.empty() && !arm_stop_types.empty()) {
     if (
       arm_mode_ != CommandMode::POSITION
       && arm_mode_ != CommandMode::VELOCITY
@@ -839,7 +862,8 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     return return_type::ERROR;
   } else if (gripper_start_types.count(HW_IF_EFFORT)) {
     gripper_mode_ = CommandMode::EFFORT;
-    std::fill(joint_effort_commands_.begin(), joint_effort_commands_.end(), 0.0);
+    // Set gripper joint effort command to zero
+    joint_effort_commands_.at(gripper_joint_index_) = 0.0;
     try {
       arm_driver_->set_gripper_mode(trossen_arm::Mode::effort);
     } catch (const std::exception & e) {
@@ -848,8 +872,8 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     }
     RCLCPP_INFO(get_logger(), "Switched to effort command mode for the gripper.");
   }
-  // If no gripper start interfaces provided we may just be stopping a mode
-  if (gripper_start_types.empty()) {
+  // If no gripper start interfaces provided and gripper stop interfaces provided, go to idle
+  if (gripper_start_types.empty() && !gripper_stop_types.empty()) {
     if (
       gripper_mode_ != CommandMode::POSITION
       && gripper_mode_ != CommandMode::VELOCITY
