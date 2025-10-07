@@ -834,15 +834,9 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     }
     RCLCPP_INFO(get_logger(), "Switched to position command mode for the gripper.");
   } else if (gripper_start_types.count(HW_IF_VELOCITY)) {
-    gripper_mode_ = CommandMode::VELOCITY;
-    std::fill(joint_velocity_commands_.begin(), joint_velocity_commands_.end(), 0.0);
-    try {
-      arm_driver_->set_gripper_mode(trossen_arm::Mode::velocity);
-    } catch (const std::exception & e) {
-      RCLCPP_ERROR(get_logger(), "Failed to set driver to gripper velocity mode: %s", e.what());
-      return return_type::ERROR;
-    }
-    RCLCPP_INFO(get_logger(), "Switched to velocity command mode for the gripper.");
+    // Velocity not implemented yet
+    RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented for the gripper.");
+    return return_type::ERROR;
   } else if (gripper_start_types.count(HW_IF_EFFORT)) {
     gripper_mode_ = CommandMode::EFFORT;
     std::fill(joint_effort_commands_.begin(), joint_effort_commands_.end(), 0.0);
