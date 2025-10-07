@@ -747,15 +747,11 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
   const std::vector<std::string> & start_interfaces,
   const std::vector<std::string> & /*stop_interfaces*/)
 {
-  // Determine which command interface types are being started - all others will be stopped on
-  // switching modes
-  auto start_types = interface_types_from_list(start_interfaces);
-
   // Differentiate between arm and gripper interfaces
   // We expect only one type for each, but use sets to be safe
   std::set<std::string> arm_start_types;
   std::set<std::string> gripper_start_types;
-  for (const auto & type : start_types) {
+  for (const auto & type : start_interfaces) {
     if (is_gripper_interface(type)) {
       gripper_start_types.insert(type);
     } else {
