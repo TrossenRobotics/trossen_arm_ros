@@ -768,7 +768,10 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
   }
   if (arm_start_types.count(HW_IF_POSITION)) {
     arm_mode_ = CommandMode::POSITION;
-    joint_position_commands_ = joint_positions_;
+    // Set arm joint position commands to current arm joint positions to prevent jumps
+    joint_position_commands_.assign(
+      joint_positions_.begin(),
+      joint_positions_.begin() + gripper_joint_index_);
     try {
       arm_driver_->set_arm_modes(trossen_arm::Mode::position);
     } catch (const std::exception & e) {
@@ -782,7 +785,11 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     return return_type::ERROR;
   } else if (arm_start_types.count(HW_IF_EFFORT)) {
     arm_mode_ = CommandMode::EFFORT;
-    std::fill(joint_effort_commands_.begin(), joint_effort_commands_.end(), 0.0);
+    // Set arm joint external effort commands to zero
+    std::fill(
+      joint_effort_commands_.begin(),
+      joint_effort_commands_.begin() + gripper_joint_index_,
+      0.0);
     try {
       arm_driver_->set_arm_modes(trossen_arm::Mode::external_effort);
     } catch (const std::exception & e) {
