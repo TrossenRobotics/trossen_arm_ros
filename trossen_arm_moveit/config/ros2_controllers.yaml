@@ -43,3 +43,4 @@ arm_controller:
 gripper_controller:
   ros__parameters:
     joint: left_carriage_joint
+    allow_stalling: true
