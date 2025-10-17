@@ -41,6 +41,8 @@ joint_limits:
     has_acceleration_limits: true
     max_acceleration: 3.141596
   left_carriage_joint:
+    min_position: -0.01  # This joint can physically go slightly below zero in closed configuration
+    max_position: 0.45  # This joint can physically go slightly above 0.44 in open configuration
     has_velocity_limits: true
     max_velocity: 0.25
     has_acceleration_limits: true
