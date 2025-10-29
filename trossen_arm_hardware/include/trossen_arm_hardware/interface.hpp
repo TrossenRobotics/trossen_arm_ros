@@ -30,6 +30,7 @@
 #define TROSSEN_ARM_HARDWARE__INTERFACE_HPP_
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -46,11 +47,13 @@
 namespace trossen_arm_hardware
 {
 
-static const char DRIVER_IP_ADDRESS_DEFAULT[] = "192.168.1.2";
+constexpr char DRIVER_IP_ADDRESS_DEFAULT[] = "192.168.1.2";
 
-static const char END_EFFECTOR_BASE[] = "base";
-static const char END_EFFECTOR_FOLLOWER[] = "follower";
-static const char END_EFFECTOR_LEADER[] = "leader";
+constexpr char END_EFFECTOR_BASE[] = "base";
+constexpr char END_EFFECTOR_FOLLOWER[] = "follower";
+constexpr char END_EFFECTOR_LEADER[] = "leader";
+
+constexpr char HW_IF_EXTERNAL_EFFORT[] = "external_effort";
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -70,9 +73,9 @@ public:
 
   CallbackReturn on_init(const HardwareInfo & info) override;
 
-  std::vector<hardware_interface::StateInterface> export_state_interfaces() override;
+  std::vector<StateInterface> export_state_interfaces() override;
 
-  std::vector<hardware_interface::CommandInterface> export_command_interfaces() override;
+  std::vector<CommandInterface> export_command_interfaces() override;
 
   CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
@@ -85,6 +88,14 @@ public:
   return_type read(const rclcpp::Time & time, const rclcpp::Duration & duration) override;
 
   return_type write(const rclcpp::Time & time, const rclcpp::Duration & duration) override;
+
+  return_type prepare_command_mode_switch(
+    const std::vector<std::string> & start_interfaces,
+    const std::vector<std::string> & stop_interfaces) override;
+
+  return_type perform_command_mode_switch(
+    const std::vector<std::string> & start_interfaces,
+    const std::vector<std::string> & stop_interfaces) override;
 
 protected:
   // The driver for the robot
@@ -117,21 +128,56 @@ protected:
   // Joint position commands in radians for the arm and meters for the gripper
   std::vector<double> joint_position_commands_;
 
+  // Joint velocity commands in radians per second for the arm and meters per second for the gripper
+  std::vector<double> joint_velocity_commands_;
+
+  // Joint external effort commands in Nm for the arm and N for the gripper
+  std::vector<double> joint_external_effort_commands_;
+
   // Flag to indicate the first read/write update
   bool first_update_{true};
 
-  const size_t COUNT_COMMAND_INTERFACES_ = 1;  // position
+  const size_t COUNT_COMMAND_INTERFACES_ = 3;  // position, velocity, external effort
   const size_t INDEX_COMMAND_INTERFACE_POSITION_ = 0;
+  const size_t INDEX_COMMAND_INTERFACE_VELOCITY_ = 1;
+  const size_t INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_ = 2;
   const size_t COUNT_STATE_INTERFACES_ = 3;  // position, velocity, effort
   const size_t INDEX_STATE_INTERFACE_POSITION_ = 0;
   const size_t INDEX_STATE_INTERFACE_VELOCITY_ = 1;
   const size_t INDEX_STATE_INTERFACE_EFFORT_ = 2;
+
+  // Control mode flags
+  bool arm_position_mode_running_{false};
+  bool arm_velocity_mode_running_{false};
+  bool arm_external_effort_mode_running_{false};
+  bool gripper_position_mode_running_{false};
+  bool gripper_velocity_mode_running_{false};
+  bool gripper_effort_mode_running_{false};
 
   // Logger
   static rclcpp::Logger get_logger()
   {
     return rclcpp::get_logger("trossen_arm_hardware");
   }
+
+  /**
+   * @brief Check if the interface type is in the stop interfaces
+   *
+   * @param stop_interfaces The interfaces to stop
+   * @param type The interface type to check
+   * @return true if the interface type is in the stop interfaces, false otherwise
+   */
+  bool interface_type_in_stop(
+    const std::vector<std::string> & stop_interfaces,
+    const std::string & type);
+
+  /**
+   * @brief Extract the interface types from a list of interfaces
+   *
+   * @param ifaces The list of interfaces
+   * @return A set of interface types
+   */
+  std::set<std::string> interface_types_from_list(const std::vector<std::string> & ifaces);
 };
 
 }  // namespace trossen_arm_hardware

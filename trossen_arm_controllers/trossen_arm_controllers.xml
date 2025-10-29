@@ -1,0 +1,7 @@
+<library path="trossen_arm_controllers">
+  <class name="trossen_arm_controllers/GravityCompensationController"
+         type="trossen_arm_controllers::GravityCompensationController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>Controller for the Trossen Arm that does gravity compensation by sending zero external effort commands.</description>
+  </class>
+</library>
