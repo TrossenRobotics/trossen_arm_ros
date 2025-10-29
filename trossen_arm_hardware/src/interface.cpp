@@ -110,7 +110,7 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
   joint_effort_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
 
   for (const auto & joint : info_.joints) {
-    // Each joint has 3 command interfaces: position, velocity, effort (in that order)
+    // Each joint has 3 command interfaces: position, velocity, external effort (in that order)
     // Expect exactly three command interfaces
     if (joint.command_interfaces.size() != COUNT_COMMAND_INTERFACES_) {
       RCLCPP_ERROR(
@@ -126,9 +126,10 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_POSITION_).name != HW_IF_POSITION) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has '%s' command interface found. '%s' expected",
+        "Joint '%s' has '%s' command interface found at index '%ld'. '%s' expected",
         joint.name.c_str(),
         joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_POSITION_).name.c_str(),
+        INDEX_COMMAND_INTERFACE_POSITION_,
         HW_IF_POSITION);
       return CallbackReturn::ERROR;
     }
@@ -137,21 +138,23 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_VELOCITY_).name != HW_IF_VELOCITY) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has '%s' command interface found. '%s' expected",
+        "Joint '%s' has '%s' command interface found at index '%ld'. '%s' expected",
         joint.name.c_str(),
         joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_VELOCITY_).name.c_str(),
+        INDEX_COMMAND_INTERFACE_VELOCITY_,
         HW_IF_VELOCITY);
       return CallbackReturn::ERROR;
     }
 
-    // Effort third
-    if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_EFFORT_).name != HW_IF_EFFORT) {
+    // External effort third
+    if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_).name != HW_IF_EXTERNAL_EFFORT) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has '%s' command interface found. '%s' expected",
+        "Joint '%s' has '%s' command interface found at index '%ld'. '%s' expected",
         joint.name.c_str(),
-        joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_EFFORT_).name.c_str(),
-        HW_IF_EFFORT);
+        joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_).name.c_str(),
+        INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_,
+        HW_IF_EXTERNAL_EFFORT);
       return CallbackReturn::ERROR;
     }
 
@@ -171,9 +174,10 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     if (joint.state_interfaces.at(INDEX_STATE_INTERFACE_POSITION_).name != HW_IF_POSITION) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has '%s' state interface found. '%s' expected",
+        "Joint '%s' has '%s' state interface found at index '%ld'. '%s' expected",
         joint.name.c_str(),
         joint.state_interfaces.at(INDEX_STATE_INTERFACE_POSITION_).name.c_str(),
+        INDEX_STATE_INTERFACE_POSITION_,
         HW_IF_POSITION);
       return CallbackReturn::ERROR;
     }
@@ -182,9 +186,10 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     if (joint.state_interfaces.at(INDEX_STATE_INTERFACE_VELOCITY_).name != HW_IF_VELOCITY) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has '%s' state interface found. '%s' expected",
+        "Joint '%s' has '%s' state interface found at index '%ld'. '%s' expected",
         joint.name.c_str(),
         joint.state_interfaces.at(INDEX_STATE_INTERFACE_VELOCITY_).name.c_str(),
+        INDEX_STATE_INTERFACE_VELOCITY_,
         HW_IF_VELOCITY);
       return CallbackReturn::ERROR;
     }
@@ -193,9 +198,10 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     if (joint.state_interfaces.at(INDEX_STATE_INTERFACE_EFFORT_).name != HW_IF_EFFORT) {
       RCLCPP_ERROR(
         get_logger(),
-        "Joint '%s' has '%s' state interface found. '%s' expected",
+        "Joint '%s' has '%s' state interface found at index '%ld'. '%s' expected",
         joint.name.c_str(),
         joint.state_interfaces.at(INDEX_STATE_INTERFACE_EFFORT_).name.c_str(),
+        INDEX_STATE_INTERFACE_EFFORT_,
         HW_IF_EFFORT);
       return CallbackReturn::ERROR;
     }
@@ -253,7 +259,7 @@ TrossenArmHardwareInterface::export_command_interfaces()
     command_interfaces.emplace_back(
       hardware_interface::CommandInterface(
         info_.joints[i].name,
-        HW_IF_EFFORT,
+        HW_IF_EXTERNAL_EFFORT,
         &joint_effort_commands_[i]));
   }
   return command_interfaces;
@@ -383,7 +389,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
     auto slash_pos = iface.rfind('/');
     std::string type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
 
-    if (type != HW_IF_POSITION && type != HW_IF_VELOCITY && type != HW_IF_EFFORT) {
+    if (type != HW_IF_POSITION && type != HW_IF_VELOCITY && type != HW_IF_EXTERNAL_EFFORT) {
       RCLCPP_ERROR(get_logger(), "Unsupported command interface '%s' requested.", type.c_str());
       return return_type::ERROR;
     }
@@ -415,7 +421,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
         "Velocity mode is active but not requested to stop before switching to position mode.");
       return return_type::ERROR;
     }
-    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EFFORT)) {
+    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT)) {
       RCLCPP_ERROR(
         get_logger(),
         "Effort mode is active but not requested to stop before switching to position mode.");
@@ -434,7 +440,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
         "Position mode is active but not requested to stop before switching to velocity mode.");
       return return_type::ERROR;
     }
-    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EFFORT)) {
+    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT)) {
       RCLCPP_ERROR(
         get_logger(),
         "Effort mode is active but not requested to stop before switching to velocity mode.");
@@ -443,7 +449,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
     // TODO(lukeschmtit-tr): Velocity mode not implemented yet - handle at prepare
     RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented.");
     return return_type::ERROR;
-  } else if (requested_interface_type == HW_IF_EFFORT) {
+  } else if (requested_interface_type == HW_IF_EXTERNAL_EFFORT) {
     // Validate effort mode can be started - need to stop position, velocity interfaces
     if (arm_effort_mode_running_) {
       // No change needed
@@ -488,7 +494,7 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
   if (stop_types.count(HW_IF_VELOCITY)) {
     arm_velocity_mode_running_ = false;
   }
-  if (stop_types.count(HW_IF_EFFORT)) {
+  if (stop_types.count(HW_IF_EXTERNAL_EFFORT)) {
     arm_effort_mode_running_ = false;
   }
 
@@ -509,7 +515,7 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
     // Velocity not implemented yet
     RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented.");
     return return_type::ERROR;
-  } else if (start_types.count(HW_IF_EFFORT)) {
+  } else if (start_types.count(HW_IF_EXTERNAL_EFFORT)) {
     arm_position_mode_running_ = false;
     arm_velocity_mode_running_ = false;
     arm_effort_mode_running_ = true;

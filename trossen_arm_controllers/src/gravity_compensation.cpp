@@ -69,7 +69,7 @@ GravityCompensationController::command_interface_configuration() const
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
   for (const auto& joint_name : joint_names_) {
-    config.names.push_back(joint_name + "/" + hardware_interface::HW_IF_EFFORT);
+    config.names.push_back(joint_name + "/" + HW_IF_EXTERNAL_EFFORT);
   }
 
   return config;

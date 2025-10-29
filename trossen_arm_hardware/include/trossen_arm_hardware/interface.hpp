@@ -52,6 +52,8 @@ constexpr char END_EFFECTOR_BASE[] = "base";
 constexpr char END_EFFECTOR_FOLLOWER[] = "follower";
 constexpr char END_EFFECTOR_LEADER[] = "leader";
 
+constexpr char HW_IF_EXTERNAL_EFFORT[] = "external_effort";
+
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
 using hardware_interface::CommandInterface;
@@ -137,7 +139,7 @@ protected:
   const size_t COUNT_COMMAND_INTERFACES_ = 3;  // position, velocity, effort
   const size_t INDEX_COMMAND_INTERFACE_POSITION_ = 0;
   const size_t INDEX_COMMAND_INTERFACE_VELOCITY_ = 1;
-  const size_t INDEX_COMMAND_INTERFACE_EFFORT_ = 2;
+  const size_t INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_ = 2;
   const size_t COUNT_STATE_INTERFACES_ = 3;  // position, velocity, effort
   const size_t INDEX_STATE_INTERFACE_POSITION_ = 0;
   const size_t INDEX_STATE_INTERFACE_VELOCITY_ = 1;

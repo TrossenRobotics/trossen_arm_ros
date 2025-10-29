@@ -36,11 +36,13 @@
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "rclcpp/duration.hpp"
 #include "rclcpp/time.hpp"
+#include "trossen_arm_hardware/interface.hpp"
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 using controller_interface::ControllerInterface;
 using controller_interface::InterfaceConfiguration;
 using controller_interface::return_type;
+using trossen_arm_hardware::HW_IF_EXTERNAL_EFFORT;
 
 namespace trossen_arm_controllers {
 
