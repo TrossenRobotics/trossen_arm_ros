@@ -107,7 +107,8 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
   // Joint command interfaces
   joint_position_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_velocity_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
-  joint_external_effort_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
+  joint_external_effort_commands_.resize(info_.joints.size(),
+      std::numeric_limits<double>::quiet_NaN());
 
   for (const auto & joint : info_.joints) {
     // Each joint has 3 command interfaces: position, velocity, external effort (in that order)
@@ -425,11 +426,13 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
       return return_type::ERROR;
     }
     if (
-      arm_external_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT))
+      arm_external_effort_mode_running_ && !interface_type_in_stop(stop_interfaces,
+        HW_IF_EXTERNAL_EFFORT))
     {
       RCLCPP_ERROR(
         get_logger(),
-        "External effort mode is active but not requested to stop before switching to position mode.");
+        "External effort mode is active but not requested to stop before switching to "
+        "position mode.");
       return return_type::ERROR;
     }
   } else if (requested_interface_type == HW_IF_VELOCITY) {
@@ -446,11 +449,13 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
       return return_type::ERROR;
     }
     if (
-      arm_external_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT))
+      arm_external_effort_mode_running_ && !interface_type_in_stop(stop_interfaces,
+        HW_IF_EXTERNAL_EFFORT))
     {
       RCLCPP_ERROR(
         get_logger(),
-        "External effort mode is active but not requested to stop before switching to velocity mode.");
+        "External effort mode is active but not requested to stop before switching to "
+        "velocity mode.");
       return return_type::ERROR;
     }
     // TODO(lukeschmtit-tr): Velocity mode not implemented yet - handle at prepare
@@ -466,13 +471,15 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
     if (arm_position_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_POSITION)) {
       RCLCPP_ERROR(
         get_logger(),
-        "Position mode is active but not requested to stop before switching to external effort mode.");
+        "Position mode is active but not requested to stop before switching to "
+        "external effort mode.");
       return return_type::ERROR;
     }
     if (arm_velocity_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_VELOCITY)) {
       RCLCPP_ERROR(
         get_logger(),
-        "Velocity mode is active but not requested to stop before switching to external effort mode.");
+        "Velocity mode is active but not requested to stop before switching to "
+        "external effort mode.");
       return return_type::ERROR;
     }
   }
@@ -538,7 +545,9 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
 
   // If no start interfaces provided we may just be stopping a mode
   if (start_types.empty()) {
-    if (!arm_position_mode_running_ && !arm_velocity_mode_running_ && !arm_external_effort_mode_running_) {
+    if (!arm_position_mode_running_ && !arm_velocity_mode_running_ &&
+      !arm_external_effort_mode_running_)
+    {
       try {
         arm_driver_->set_all_modes(trossen_arm::Mode::idle);
       } catch (const std::exception & e) {
