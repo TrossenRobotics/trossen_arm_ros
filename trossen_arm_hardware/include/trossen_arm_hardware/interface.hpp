@@ -132,12 +132,12 @@ protected:
   std::vector<double> joint_velocity_commands_;
 
   // Joint external effort commands in Nm for the arm and N for the gripper
-  std::vector<double> joint_effort_commands_;
+  std::vector<double> joint_external_effort_commands_;
 
   // Flag to indicate the first read/write update
   bool first_update_{true};
 
-  const size_t COUNT_COMMAND_INTERFACES_ = 3;  // position, velocity, effort
+  const size_t COUNT_COMMAND_INTERFACES_ = 3;  // position, velocity, external effort
   const size_t INDEX_COMMAND_INTERFACE_POSITION_ = 0;
   const size_t INDEX_COMMAND_INTERFACE_VELOCITY_ = 1;
   const size_t INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_ = 2;
@@ -149,7 +149,7 @@ protected:
   // Control mode flags
   bool arm_position_mode_running_{false};
   bool arm_velocity_mode_running_{false};
-  bool arm_effort_mode_running_{false};
+  bool arm_external_effort_mode_running_{false};
   bool gripper_position_mode_running_{false};
   bool gripper_velocity_mode_running_{false};
   bool gripper_effort_mode_running_{false};
