@@ -107,8 +107,9 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
   // Joint command interfaces
   joint_position_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
   joint_velocity_commands_.resize(info_.joints.size(), std::numeric_limits<double>::quiet_NaN());
-  joint_external_effort_commands_.resize(info_.joints.size(),
-      std::numeric_limits<double>::quiet_NaN());
+  joint_external_effort_commands_.resize(
+    info_.joints.size(),
+    std::numeric_limits<double>::quiet_NaN());
 
   for (const auto & joint : info_.joints) {
     // Each joint has 3 command interfaces: position, velocity, external effort (in that order)
@@ -426,7 +427,8 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
       return return_type::ERROR;
     }
     if (
-      arm_external_effort_mode_running_ && !interface_type_in_stop(stop_interfaces,
+      arm_external_effort_mode_running_ && !interface_type_in_stop(
+        stop_interfaces,
         HW_IF_EXTERNAL_EFFORT))
     {
       RCLCPP_ERROR(
@@ -449,7 +451,8 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
       return return_type::ERROR;
     }
     if (
-      arm_external_effort_mode_running_ && !interface_type_in_stop(stop_interfaces,
+      arm_external_effort_mode_running_ && !interface_type_in_stop(
+        stop_interfaces,
         HW_IF_EXTERNAL_EFFORT))
     {
       RCLCPP_ERROR(
