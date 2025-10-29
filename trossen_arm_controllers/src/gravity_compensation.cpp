@@ -28,14 +28,15 @@
 
 #include "trossen_arm_controllers/gravity_compensation.hpp"
 
-namespace trossen_arm_controllers {
+namespace trossen_arm_controllers
+{
 
 CallbackReturn
 GravityCompensationController::on_init()
 {
   try {
     auto_declare<std::vector<std::string>>("joints", {});
-  } catch (std::exception& e) {
+  } catch (std::exception & e) {
     RCLCPP_ERROR(get_node()->get_logger(), "Failed to initialize node parameters.");
     return CallbackReturn::ERROR;
   }
@@ -43,7 +44,7 @@ GravityCompensationController::on_init()
 }
 
 CallbackReturn GravityCompensationController::on_configure(
-    const rclcpp_lifecycle::State& /*previous_state*/)
+  const rclcpp_lifecycle::State & /*previous_state*/)
 {
   try {
     joint_names_ = get_node()->get_parameter("joints").as_string_array();
@@ -68,7 +69,7 @@ GravityCompensationController::command_interface_configuration() const
   InterfaceConfiguration config;
   config.type = controller_interface::interface_configuration_type::INDIVIDUAL;
 
-  for (const auto& joint_name : joint_names_) {
+  for (const auto & joint_name : joint_names_) {
     config.names.push_back(joint_name + "/" + HW_IF_EXTERNAL_EFFORT);
   }
 
@@ -84,11 +85,11 @@ GravityCompensationController::state_interface_configuration() const
 
 return_type
 GravityCompensationController::update(
-    const rclcpp::Time& /*time*/,
-    const rclcpp::Duration& /*period*/)
+  const rclcpp::Time & /*time*/,
+  const rclcpp::Duration & /*period*/)
 {
   // Set all command interfaces to zero external effort
-  for (auto& command_interface : command_interfaces_) {
+  for (auto & command_interface : command_interfaces_) {
     if (!command_interface.set_value(0.0)) {
       RCLCPP_ERROR(get_node()->get_logger(), "Failed to set command interface value");
       return return_type::ERROR;

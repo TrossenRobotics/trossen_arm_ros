@@ -147,7 +147,10 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     }
 
     // External effort third
-    if (joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_).name != HW_IF_EXTERNAL_EFFORT) {
+    if (
+      joint.command_interfaces.at(INDEX_COMMAND_INTERFACE_EXTERNAL_EFFORT_).name !=
+      HW_IF_EXTERNAL_EFFORT)
+    {
       RCLCPP_ERROR(
         get_logger(),
         "Joint '%s' has '%s' command interface found at index '%ld'. '%s' expected",
@@ -421,7 +424,9 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
         "Velocity mode is active but not requested to stop before switching to position mode.");
       return return_type::ERROR;
     }
-    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT)) {
+    if (
+      arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT))
+    {
       RCLCPP_ERROR(
         get_logger(),
         "Effort mode is active but not requested to stop before switching to position mode.");
@@ -440,7 +445,9 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
         "Position mode is active but not requested to stop before switching to velocity mode.");
       return return_type::ERROR;
     }
-    if (arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT)) {
+    if (
+      arm_effort_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_EXTERNAL_EFFORT))
+    {
       RCLCPP_ERROR(
         get_logger(),
         "Effort mode is active but not requested to stop before switching to velocity mode.");
@@ -580,7 +587,8 @@ TrossenArmHardwareInterface::interface_type_in_stop(
 }
 
 std::set<std::string>
-TrossenArmHardwareInterface::interface_types_from_list(const std::vector<std::string> & ifaces) {
+TrossenArmHardwareInterface::interface_types_from_list(const std::vector<std::string> & ifaces)
+{
   std::set<std::string> types;
   for (const auto & iface : ifaces) {
     auto slash_pos = iface.rfind('/');
@@ -588,7 +596,7 @@ TrossenArmHardwareInterface::interface_types_from_list(const std::vector<std::st
     types.insert(type);
   }
   return types;
-};
+}
 
 }  // namespace trossen_arm_hardware
 

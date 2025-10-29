@@ -44,20 +44,22 @@ using controller_interface::InterfaceConfiguration;
 using controller_interface::return_type;
 using trossen_arm_hardware::HW_IF_EXTERNAL_EFFORT;
 
-namespace trossen_arm_controllers {
+namespace trossen_arm_controllers
+{
 
 
 class GravityCompensationController : public controller_interface::ControllerInterface {
 public:
   CallbackReturn on_init() override;
 
-  CallbackReturn on_configure(const rclcpp_lifecycle::State& previous_state) override;
+  CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
   InterfaceConfiguration command_interface_configuration() const override;
 
   InterfaceConfiguration state_interface_configuration() const override;
 
-  return_type update(const rclcpp::Time& time, const rclcpp::Duration& period) override;
+  return_type update(const rclcpp::Time & time, const rclcpp::Duration & period) override;
+
 protected:
   /// @brief Names of the joint this controller will command
   std::vector<std::string> joint_names_;

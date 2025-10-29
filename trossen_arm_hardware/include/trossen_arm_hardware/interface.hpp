@@ -30,6 +30,7 @@
 #define TROSSEN_ARM_HARDWARE__INTERFACE_HPP_
 
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -89,12 +90,12 @@ public:
   return_type write(const rclcpp::Time & time, const rclcpp::Duration & duration) override;
 
   return_type prepare_command_mode_switch(
-    const std::vector<std::string>& start_interfaces,
-    const std::vector<std::string>& stop_interfaces) override;
+    const std::vector<std::string> & start_interfaces,
+    const std::vector<std::string> & stop_interfaces) override;
 
   return_type perform_command_mode_switch(
-    const std::vector<std::string>& start_interfaces,
-    const std::vector<std::string>& stop_interfaces) override;
+    const std::vector<std::string> & start_interfaces,
+    const std::vector<std::string> & stop_interfaces) override;
 
 protected:
   // The driver for the robot
@@ -177,7 +178,6 @@ protected:
    * @return A set of interface types
    */
   std::set<std::string> interface_types_from_list(const std::vector<std::string> & ifaces);
-
 };
 
 }  // namespace trossen_arm_hardware
