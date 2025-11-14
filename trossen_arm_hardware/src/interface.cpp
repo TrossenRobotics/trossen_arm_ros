@@ -427,17 +427,70 @@ TrossenArmHardwareInterface::write(
   const rclcpp::Time & /*time*/,
   const rclcpp::Duration & /*period*/)
 {
-  // If first time writing to the hardware, set all commands to the current positions
+  // If first time writing to the hardware, set all commands to current values
   if (first_update_) {
     RCLCPP_DEBUG(
       get_logger(),
-      "First write update. Setting joint position commands to current positions.");
-    joint_position_commands_ = joint_positions_;
+      "First write update. Setting commands to current state.");
+
+    if (arm_cartesian_position_mode_running_) {
+      auto current_pose = arm_driver_->get_cartesian_positions();
+      std::copy(current_pose.begin(), current_pose.end(), cartesian_pose_commands_.begin());
+    } else {
+      joint_position_commands_ = joint_positions_;
+    }
+
     first_update_ = false;
   }
 
-  // Send the now validated commands to the driver
-  if (arm_position_mode_running_) {
+  // Send validated commands to the driver
+  if (arm_cartesian_position_mode_running_) {
+    // Validate commands
+    bool valid_command = true;
+    for (const auto & cmd : cartesian_pose_commands_) {
+      if (std::isnan(cmd)) {
+        valid_command = false;
+        break;
+      }
+    }
+
+    if (valid_command) {
+      // Convert to array
+      std::array<double, 6> goal_positions;
+      std::copy(
+        cartesian_pose_commands_.begin(),
+        cartesian_pose_commands_.end(),
+        goal_positions.begin());
+
+      try {
+        // Send to driver with non-blocking mode
+        arm_driver_->set_cartesian_positions(
+          goal_positions,
+          trossen_arm::InterpolationSpace::cartesian,
+          cartesian_goal_time_,
+          false  // non-blocking
+        );
+      } catch (const trossen_arm::LogicError & e) {
+        RCLCPP_ERROR(
+          get_logger(),
+          "Cartesian pose command failed: %s",
+          e.what());
+        return return_type::ERROR;
+      } catch (const trossen_arm::RuntimeError & e) {
+        RCLCPP_ERROR(
+          get_logger(),
+          "Cartesian pose command runtime error: %s",
+          e.what());
+        return return_type::ERROR;
+      }
+    } else {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(),
+        *get_clock(),
+        5000,
+        "Cartesian pose command contains NaN values, skipping execution.");
+    }
+  } else if (arm_position_mode_running_) {
     arm_driver_->set_all_positions(joint_position_commands_, 0.0, false);
   } else if (arm_velocity_mode_running_) {
     RCLCPP_ERROR(get_logger(), "Velocity mode not implemented yet.");
