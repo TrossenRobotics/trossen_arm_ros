@@ -73,10 +73,10 @@ CallbackReturn CartesianPoseController::on_configure(
   }
 
   // Create subscription to target pose
-  sub_target_pose_ = get_node()->create_subscription<geometry_msgs::msg::PoseStamped>(
+  sub_target_pose_ = get_node()->create_subscription<PoseStamped>(
     "~/target_pose",
     rclcpp::SystemDefaultsQoS(),
-    std::bind(CartesianPoseController::target_pose_callback, this, std::placeholders::_1));
+    std::bind(&CartesianPoseController::target_pose_callback, this, std::placeholders::_1));
 
   RCLCPP_INFO(
     get_node()->get_logger(),
@@ -106,7 +106,7 @@ CallbackReturn CartesianPoseController::on_activate(
   RCLCPP_INFO(
     get_node()->get_logger(),
     "Activated CartesianPoseController - ready to receive pose commands on topic '%s'",
-    sub_target_pose_->get_topic_name().c_str());
+    sub_target_pose_->get_topic_name());
 
   return CallbackReturn::SUCCESS;
 }
@@ -175,8 +175,7 @@ CartesianPoseController::update(
   return return_type::OK;
 }
 
-void CartesianPoseController::target_pose_callback(
-  const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+void CartesianPoseController::target_pose_callback(const PoseStamped::SharedPtr msg)
 {
   // Convert quaternion to axis-angle
   auto axis_angle = quaternion_to_axis_angle(

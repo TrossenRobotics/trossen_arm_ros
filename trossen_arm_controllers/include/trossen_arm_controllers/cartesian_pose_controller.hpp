@@ -46,6 +46,7 @@ using controller_interface::ControllerInterface;
 using controller_interface::InterfaceConfiguration;
 using controller_interface::return_type;
 using trossen_arm_hardware::HW_IF_CARTESIAN_POSE;
+using geometry_msgs::msg::PoseStamped;
 
 namespace trossen_arm_controllers
 {
@@ -71,7 +72,7 @@ protected:
    * @brief Callback for receiving target pose commands.
    * @param msg The target pose message in the base frame.
    */
-  void target_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+  void target_pose_callback(const PoseStamped::SharedPtr msg);
 
   /**
    * @brief Convert quaternion to axis-angle representation.
@@ -95,7 +96,7 @@ protected:
   std::vector<std::string> gpio_names_;
 
   /// @brief Subscriber to target pose commands
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub_target_pose_;
+  rclcpp::Subscription<PoseStamped>::SharedPtr sub_target_pose_;
 
   /// @brief Realtime buffer for passing commands from callback to control loop
   realtime_tools::RealtimeBuffer<std::array<double, 6>> rt_command_buffer_;
