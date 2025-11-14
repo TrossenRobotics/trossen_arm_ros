@@ -461,14 +461,15 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
     return return_type::OK;
   }
 
-  // Determine which single command interface type (position/velocity/external effort) is requested
+  // Determine which single command interface type (position/velocity/external effort/cartesian_pose) is requested
   std::string requested_interface_type;
   for (const auto & iface : start_interfaces) {
-    // Interface names are in the format: `<joint_name>/<interface_type>`
+    // Interface names are in the format: `<joint_name>/<interface_type>` or `<gpio_name>/<interface_type>`
     auto slash_pos = iface.rfind('/');
     std::string type = (slash_pos == std::string::npos) ? iface : iface.substr(slash_pos + 1);
 
-    if (type != HW_IF_POSITION && type != HW_IF_VELOCITY && type != HW_IF_EXTERNAL_EFFORT) {
+    if (type != HW_IF_POSITION && type != HW_IF_VELOCITY &&
+        type != HW_IF_EXTERNAL_EFFORT && type != HW_IF_CARTESIAN_POSE) {
       RCLCPP_ERROR(get_logger(), "Unsupported command interface '%s' requested.", type.c_str());
       return return_type::ERROR;
     }
@@ -488,7 +489,7 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
   // If a different mode is already running, its interfaces must be listed in stop_interfaces.
 
   if (requested_interface_type == HW_IF_POSITION) {
-    // Validate position mode can be started - need to stop velocity, external effort interfaces
+    // Validate position mode can be started - need to stop velocity, external effort, and Cartesian interfaces
     if (arm_position_mode_running_) {
       // No change needed
       RCLCPP_DEBUG(get_logger(), "Position mode already active. No change needed.");
@@ -510,8 +511,18 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
         "position mode.");
       return return_type::ERROR;
     }
+    if (
+      arm_cartesian_position_mode_running_ && !interface_type_in_stop(stop_interfaces,
+        HW_IF_CARTESIAN_POSE))
+    {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Cartesian pose mode is active but not requested to stop before switching to "
+        "position mode.");
+      return return_type::ERROR;
+    }
   } else if (requested_interface_type == HW_IF_VELOCITY) {
-    // Validate velocity mode can be started - need to stop position, external effort interfaces
+    // Validate velocity mode can be started - need to stop position, external effort, and Cartesian interfaces
     if (arm_velocity_mode_running_) {
       // No change needed
       RCLCPP_DEBUG(get_logger(), "Velocity mode already active. No change needed.");
@@ -533,11 +544,21 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
         "velocity mode.");
       return return_type::ERROR;
     }
-    // TODO(lukeschmtit-tr): Velocity mode not implemented yet - handle at prepare
+    if (
+      arm_cartesian_position_mode_running_ && !interface_type_in_stop(stop_interfaces,
+        HW_IF_CARTESIAN_POSE))
+    {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Cartesian pose mode is active but not requested to stop before switching to "
+        "velocity mode.");
+      return return_type::ERROR;
+    }
+    // TODO(lukeschmitt-tr): Velocity mode not implemented yet - handle at prepare
     RCLCPP_ERROR(get_logger(), "Velocity mode requested but not implemented.");
     return return_type::ERROR;
   } else if (requested_interface_type == HW_IF_EXTERNAL_EFFORT) {
-    // Validate external effort mode can be started - need to stop position, velocity interfaces
+    // Validate external effort mode can be started - need to stop position, velocity, and Cartesian interfaces
     if (arm_external_effort_mode_running_) {
       // No change needed
       RCLCPP_DEBUG(get_logger(), "External effort mode already active. No change needed.");
@@ -555,6 +576,48 @@ TrossenArmHardwareInterface::prepare_command_mode_switch(
         get_logger(),
         "Velocity mode is active but not requested to stop before switching to "
         "external effort mode.");
+      return return_type::ERROR;
+    }
+    if (
+      arm_cartesian_position_mode_running_ && !interface_type_in_stop(stop_interfaces,
+        HW_IF_CARTESIAN_POSE))
+    {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Cartesian pose mode is active but not requested to stop before switching to "
+        "external effort mode.");
+      return return_type::ERROR;
+    }
+  } else if (requested_interface_type == HW_IF_CARTESIAN_POSE) {
+    // Validate Cartesian mode can be started - need to stop all joint-level modes
+    if (arm_cartesian_position_mode_running_) {
+      // No change needed
+      RCLCPP_DEBUG(get_logger(), "Cartesian pose mode already active. No change needed.");
+      return return_type::OK;
+    }
+    // Cartesian mode requires all joint-level modes to be stopped
+    if (arm_position_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_POSITION)) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Position mode is active but not requested to stop before switching to "
+        "Cartesian pose mode.");
+      return return_type::ERROR;
+    }
+    if (arm_velocity_mode_running_ && !interface_type_in_stop(stop_interfaces, HW_IF_VELOCITY)) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Velocity mode is active but not requested to stop before switching to "
+        "Cartesian pose mode.");
+      return return_type::ERROR;
+    }
+    if (
+      arm_external_effort_mode_running_ && !interface_type_in_stop(stop_interfaces,
+        HW_IF_EXTERNAL_EFFORT))
+    {
+      RCLCPP_ERROR(
+        get_logger(),
+        "External effort mode is active but not requested to stop before switching to "
+        "Cartesian pose mode.");
       return return_type::ERROR;
     }
   }
@@ -586,6 +649,9 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
   if (stop_types.count(HW_IF_EXTERNAL_EFFORT)) {
     arm_external_effort_mode_running_ = false;
   }
+  if (stop_types.count(HW_IF_CARTESIAN_POSE)) {
+    arm_cartesian_position_mode_running_ = false;
+  }
 
   // Start requested mode (only one should be present due to prepare validation)
   if (start_types.count(HW_IF_POSITION)) {
@@ -616,12 +682,36 @@ TrossenArmHardwareInterface::perform_command_mode_switch(
       return return_type::ERROR;
     }
     RCLCPP_INFO(get_logger(), "Switched to external effort command mode.");
+  } else if (start_types.count(HW_IF_CARTESIAN_POSE)) {
+    // Set arm joints to position mode (required by driver for Cartesian pose control)
+    try {
+      arm_driver_->set_arm_modes(trossen_arm::Mode::position);
+    } catch (const std::exception & e) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "Failed to set driver arm joints to position mode for Cartesian pose control: %s",
+        e.what());
+      return return_type::ERROR;
+    }
+
+    // Disable all joint-level modes
+    arm_position_mode_running_ = false;
+    arm_velocity_mode_running_ = false;
+    arm_external_effort_mode_running_ = false;
+    arm_cartesian_position_mode_running_ = true;
+
+    // Initialize Cartesian commands to current pose
+    auto current_pose = arm_driver_->get_cartesian_positions();
+    std::copy(current_pose.begin(), current_pose.end(),
+              cartesian_pose_commands_.begin());
+
+    RCLCPP_INFO(get_logger(), "Switched to Cartesian pose command mode.");
   }
 
   // If no start interfaces provided we may just be stopping a mode
   if (start_types.empty()) {
     if (!arm_position_mode_running_ && !arm_velocity_mode_running_ &&
-      !arm_external_effort_mode_running_)
+      !arm_external_effort_mode_running_ && !arm_cartesian_position_mode_running_)
     {
       try {
         arm_driver_->set_all_modes(trossen_arm::Mode::idle);
