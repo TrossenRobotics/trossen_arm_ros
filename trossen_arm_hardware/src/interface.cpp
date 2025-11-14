@@ -330,6 +330,17 @@ TrossenArmHardwareInterface::export_command_interfaces()
         HW_IF_EXTERNAL_EFFORT,
         &joint_external_effort_commands_[i]));
   }
+
+  // Export Cartesian pose command interfaces from GPIO definitions
+  // GPIO names and order were already validated in on_init()
+  for (size_t i = 0; i < info_.gpios.size(); i++) {
+    command_interfaces.emplace_back(
+      hardware_interface::CommandInterface(
+        info_.gpios[i].name,
+        HW_IF_CARTESIAN_POSE,
+        &cartesian_pose_commands_[i]));
+  }
+
   return command_interfaces;
 }
 

@@ -81,8 +81,6 @@ public:
 
   std::vector<CommandInterface> export_command_interfaces() override;
 
-  std::vector<CommandInterface> export_gpio_command_interfaces() override;
-
   CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
   CallbackReturn on_activate(const rclcpp_lifecycle::State & previous_state) override;
