@@ -10,6 +10,12 @@ controller_manager:
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
+    gravity_compensation_controller:
+      type: trossen_arm_controllers/GravityCompensationController
+
+    cartesian_pose_controller:
+      type: trossen_arm_controllers/CartesianPoseController
+
 arm_controller:
   ros__parameters:
     joints:
@@ -44,3 +50,24 @@ gripper_controller:
   ros__parameters:
     joint: left_carriage_joint
     allow_stalling: true
+
+gravity_compensation_controller:
+  ros__parameters:
+    joints:
+      - joint_0
+      - joint_1
+      - joint_2
+      - joint_3
+      - joint_4
+      - joint_5
+      - left_carriage_joint
+
+cartesian_pose_controller:
+  ros__parameters:
+    gpio_names:
+      - ee_pos_x
+      - ee_pos_y
+      - ee_pos_z
+      - ee_rot_x
+      - ee_rot_y
+      - ee_rot_z

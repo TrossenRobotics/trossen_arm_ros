@@ -14,7 +14,10 @@ install(
 
 install(
   PROGRAMS
+    demos/cartesian_demo.py
     demos/controllers.py
+    demos/dual_arm_demo.py
+    demos/single_arm_demo.py
   DESTINATION
     lib/${PROJECT_NAME}
 )

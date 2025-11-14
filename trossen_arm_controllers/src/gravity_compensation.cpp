@@ -80,7 +80,7 @@ InterfaceConfiguration
 GravityCompensationController::state_interface_configuration() const
 {
   // This controller does not use state interfaces
-  return {};
+  return InterfaceConfiguration{controller_interface::interface_configuration_type::NONE};
 }
 
 return_type

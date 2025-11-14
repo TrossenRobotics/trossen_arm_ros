@@ -4,4 +4,9 @@
          base_class_type="controller_interface::ControllerInterface">
     <description>Controller for the Trossen Arm that does gravity compensation by sending zero external effort commands.</description>
   </class>
+  <class name="trossen_arm_controllers/CartesianPoseController"
+         type="trossen_arm_controllers::CartesianPoseController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>Controller for commanding Cartesian poses to the robot end-effector via GPIO interfaces.</description>
+  </class>
 </library>

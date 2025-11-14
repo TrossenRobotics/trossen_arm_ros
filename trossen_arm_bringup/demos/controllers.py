@@ -112,7 +112,7 @@ class ArmDemoNode(Node):
         goal_handle = future.result()
         if not goal_handle.accepted:
             self._is_running = False
-            fatal_msg = 'Gripper goal rejected!'
+            fatal_msg = 'Arm goal rejected!'
             self.get_logger().fatal(fatal_msg)
             raise RuntimeError(fatal_msg)
 

@@ -467,7 +467,7 @@ TrossenArmHardwareInterface::write(
         arm_driver_->set_cartesian_positions(
           goal_positions,
           trossen_arm::InterpolationSpace::cartesian,
-          cartesian_goal_time_,
+          0.0,
           false  // non-blocking
         );
       } catch (const trossen_arm::LogicError & e) {

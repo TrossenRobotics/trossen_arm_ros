@@ -3,16 +3,20 @@ project(trossen_arm_controllers)
 
 find_package(ament_cmake REQUIRED)
 find_package(controller_interface REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(realtime_tools REQUIRED)
 find_package(trossen_arm_hardware REQUIRED)
 
 set(ROS_DEPENDENCIES
   controller_interface
+  geometry_msgs
   hardware_interface
   pluginlib
   rclcpp
+  realtime_tools
   trossen_arm_hardware
 )
 
@@ -22,6 +26,7 @@ include_directories(
 
 add_library(${PROJECT_NAME} SHARED
   src/gravity_compensation.cpp
+  src/cartesian_pose_controller.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}
