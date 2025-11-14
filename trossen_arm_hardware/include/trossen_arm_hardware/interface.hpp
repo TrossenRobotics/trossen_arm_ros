@@ -29,6 +29,9 @@
 #ifndef TROSSEN_ARM_HARDWARE__INTERFACE_HPP_
 #define TROSSEN_ARM_HARDWARE__INTERFACE_HPP_
 
+#include <algorithm>
+#include <array>
+#include <limits>
 #include <memory>
 #include <set>
 #include <string>
@@ -54,6 +57,7 @@ constexpr char END_EFFECTOR_FOLLOWER[] = "follower";
 constexpr char END_EFFECTOR_LEADER[] = "leader";
 
 constexpr char HW_IF_EXTERNAL_EFFORT[] = "external_effort";
+constexpr char HW_IF_CARTESIAN_POSE[] = "cartesian_pose";
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -76,6 +80,8 @@ public:
   std::vector<StateInterface> export_state_interfaces() override;
 
   std::vector<CommandInterface> export_command_interfaces() override;
+
+  std::vector<CommandInterface> export_gpio_command_interfaces() override;
 
   CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
@@ -134,6 +140,12 @@ protected:
   // Joint external effort commands in Nm for the arm and N for the gripper
   std::vector<double> joint_external_effort_commands_;
 
+  // Cartesian pose commands: [x, y, z, rx, ry, rz] in meters and radians
+  std::vector<double> cartesian_pose_commands_;
+
+  // Cartesian goal time in seconds for non-blocking trajectory execution
+  double cartesian_goal_time_{0.02};
+
   // Flag to indicate the first read/write update
   bool first_update_{true};
 
@@ -150,6 +162,7 @@ protected:
   bool arm_position_mode_running_{false};
   bool arm_velocity_mode_running_{false};
   bool arm_external_effort_mode_running_{false};
+  bool arm_cartesian_position_mode_running_{false};
   bool gripper_position_mode_running_{false};
   bool gripper_velocity_mode_running_{false};
   bool gripper_effort_mode_running_{false};

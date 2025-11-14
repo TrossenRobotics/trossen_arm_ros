@@ -211,6 +211,70 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     }
   }
 
+  // Initialize Cartesian pose command interfaces
+  cartesian_pose_commands_.resize(6, std::numeric_limits<double>::quiet_NaN());
+
+  // Validate GPIO interfaces for Cartesian control
+  if (info_.gpios.size() != 6) {
+    RCLCPP_ERROR(
+      get_logger(),
+      "Expected 6 GPIO interfaces for Cartesian control, found %zu.",
+      info_.gpios.size());
+    return CallbackReturn::ERROR;
+  }
+
+  // Expected GPIO names
+  const std::vector<std::string> expected_gpio_names = {
+    "ee_pos_x", "ee_pos_y", "ee_pos_z", "ee_rot_x", "ee_rot_y", "ee_rot_z"
+  };
+
+  for (size_t i = 0; i < expected_gpio_names.size(); i++) {
+    if (info_.gpios[i].name != expected_gpio_names[i]) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "GPIO interface at index %zu has name '%s', expected '%s'.",
+        i,
+        info_.gpios[i].name.c_str(),
+        expected_gpio_names[i].c_str());
+      return CallbackReturn::ERROR;
+    }
+
+    // Verify each GPIO has exactly one command interface named 'cartesian_pose'
+    if (info_.gpios[i].command_interfaces.size() != 1) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "GPIO '%s' has %zu command interfaces, expected 1.",
+        info_.gpios[i].name.c_str(),
+        info_.gpios[i].command_interfaces.size());
+      return CallbackReturn::ERROR;
+    }
+
+    if (info_.gpios[i].command_interfaces[0].name != HW_IF_CARTESIAN_POSE) {
+      RCLCPP_ERROR(
+        get_logger(),
+        "GPIO '%s' has command interface '%s', expected '%s'.",
+        info_.gpios[i].name.c_str(),
+        info_.gpios[i].command_interfaces[0].name.c_str(),
+        HW_IF_CARTESIAN_POSE);
+      return CallbackReturn::ERROR;
+    }
+  }
+
+  // Parse cartesian_goal_time parameter
+  if (info_.hardware_parameters.find("cartesian_goal_time") != info_.hardware_parameters.end()) {
+    cartesian_goal_time_ = std::stod(info_.hardware_parameters.at("cartesian_goal_time"));
+    RCLCPP_INFO(
+      get_logger(),
+      "Cartesian goal time parameter set to: %.3f s",
+      cartesian_goal_time_);
+  } else {
+    cartesian_goal_time_ = 0.02;
+    RCLCPP_INFO(
+      get_logger(),
+      "Using default cartesian goal time: %.3f s",
+      cartesian_goal_time_);
+  }
+
   return CallbackReturn::SUCCESS;
 }
 
