@@ -163,7 +163,7 @@ class CartesianDemoNode(Node):
         msg.pose.orientation.w = qw
 
 
-    def stream_commands(self, poses: list[PoseStamped], delay_s: float = 0.002):
+    def stream_commands(self, poses: list[PoseStamped], delay_s: float = 0.005):
         """
         Stream a sequence of Cartesian pose commands.
 
@@ -185,7 +185,7 @@ class CartesianDemoNode(Node):
             self.publisher.publish(pose)
             time.sleep(delay_s)
 
-    def interpolate(self, poses: list[PoseStamped], steps: int = 100) -> list[PoseStamped]:
+    def interpolate(self, poses: list[PoseStamped], steps: int = 250) -> list[PoseStamped]:
         """
         Interpolate between a list of Cartesian poses.
 
@@ -311,26 +311,26 @@ def main(args=None):
     # Allow time for controller to initialize and TF to be available
     time.sleep(1.0)
 
-    # Movement 1: Move forward
-    cartesian.get_logger().info('Movement 1: Moving forward from current position...')
+    # Movement 1: Move up
+    cartesian.get_logger().info('Movement 1: Moving up from current position...')
     initial_pose = cartesian.get_current_ee_pose()
     if initial_pose is None:
         cartesian.get_logger().error('Failed to get current EE pose. Aborting demo.')
         return
     goal_pose = copy.deepcopy(initial_pose)
-    goal_pose.pose.position.x += 0.05
+    goal_pose.pose.position.z += 0.05
     poses = cartesian.interpolate([initial_pose, goal_pose], steps=100)
     cartesian.stream_commands(poses, delay_s=0.005)
     time.sleep(3.0)
 
-    # Movement 2: Move right
-    cartesian.get_logger().info('Movement 2: Moving right...')
+    # Movement 2: Move forward
+    cartesian.get_logger().info('Movement 2: Moving forward...')
     current_pose = cartesian.get_current_ee_pose()
     if current_pose is None:
         cartesian.get_logger().error('Failed to get current EE pose. Aborting demo.')
         return
     goal_pose = copy.deepcopy(current_pose)
-    goal_pose.pose.position.y -= 0.05
+    goal_pose.pose.position.x += 0.05
     poses = cartesian.interpolate([current_pose, goal_pose])
     cartesian.stream_commands(poses)
     time.sleep(3.0)
@@ -358,17 +358,17 @@ def main(args=None):
     cartesian.stream_commands(poses)
     time.sleep(3.0)
 
-    # Movement 5: Add a rotation (20 degrees around Z axis)
-    cartesian.get_logger().info('Movement 5: Rotating 20 degrees around Z axis...')
+    # Movement 5: Add a rotation (20 degrees around Y axis)
+    cartesian.get_logger().info('Movement 5: Rotating 20 degrees around Y axis...')
     current_pose = cartesian.get_current_ee_pose()
     if current_pose is None:
         cartesian.get_logger().error('Failed to get current EE pose. Aborting demo.')
         return
     goal_pose = copy.deepcopy(current_pose)
-    # Quaternion for 20° rotation around Z: [0, 0, sin(10°), cos(10°)]
+    # Quaternion for 20° rotation around Y: [0, 0, sin(10°), cos(10°)]
     goal_pose.pose.orientation.x = 0.0
-    goal_pose.pose.orientation.y = 0.0
-    goal_pose.pose.orientation.z = math.sin(math.radians(10.0))
+    goal_pose.pose.orientation.y = math.sin(math.radians(10.0))
+    goal_pose.pose.orientation.z = 0.0
     goal_pose.pose.orientation.w = math.cos(math.radians(10.0))
     poses = cartesian.interpolate([current_pose, goal_pose])
     cartesian.stream_commands(poses)
