@@ -260,21 +260,6 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
     }
   }
 
-  // Parse cartesian_goal_time parameter
-  if (info_.hardware_parameters.find("cartesian_goal_time") != info_.hardware_parameters.end()) {
-    cartesian_goal_time_ = std::stod(info_.hardware_parameters.at("cartesian_goal_time"));
-    RCLCPP_INFO(
-      get_logger(),
-      "Cartesian goal time parameter set to: %.3f s",
-      cartesian_goal_time_);
-  } else {
-    cartesian_goal_time_ = 0.02;
-    RCLCPP_INFO(
-      get_logger(),
-      "Using default cartesian goal time: %.3f s",
-      cartesian_goal_time_);
-  }
-
   return CallbackReturn::SUCCESS;
 }
 
