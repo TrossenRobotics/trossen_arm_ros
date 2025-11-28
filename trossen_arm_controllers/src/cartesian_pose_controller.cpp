@@ -161,13 +161,7 @@ CartesianPoseController::update(
     if (has_valid_data) {
       // Write command to all 6 interfaces
       for (size_t i = 0; i < 6; ++i) {
-        if (!command_interfaces_[i].set_value(command[i])) {
-          RCLCPP_ERROR(
-            get_node()->get_logger(),
-            "Failed to set command interface '%s'",
-            command_interfaces_[i].get_name().c_str());
-          return return_type::ERROR;
-        }
+        command_interfaces_[i].set_value(command[i]);
       }
     }
   }
