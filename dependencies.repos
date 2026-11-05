@@ -1,8 +1,9 @@
+# TODO (@schromya): Update branches when released
 repositories:
   trossen_arm_description:
     type: git
     url: https://github.com/TrossenRobotics/trossen_arm_description.git
-    version: jazzy
+    version: rivet_assets_rviz
   trossen_arm:
     type: git
     url: https://github.com/TrossenRobotics/trossen_arm.git
