@@ -580,6 +580,11 @@ TrossenArmHardwareInterface::on_cleanup(const rclcpp_lifecycle::State & /*previo
   return CallbackReturn::SUCCESS;
 }
 
+rclcpp::Logger TrossenArmHardwareInterface::get_logger() const
+{
+  return rclcpp::get_logger("trossen_arm_hardware");
+}
+
 bool
 TrossenArmHardwareInterface::interface_type_in_stop(
   const std::vector<std::string> & stop_interfaces,

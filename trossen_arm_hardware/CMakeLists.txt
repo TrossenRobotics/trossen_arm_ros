@@ -8,13 +8,6 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 
-set(ROS_DEPENDENCIES
-  hardware_interface
-  pluginlib
-  rclcpp
-  rclcpp_lifecycle
-)
-
 include_directories(
   include
 )
@@ -23,13 +16,12 @@ add_library(${PROJECT_NAME} SHARED
   src/interface.cpp
 )
 
-ament_target_dependencies(${PROJECT_NAME}
-  ${ROS_DEPENDENCIES}
-)
-
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME} PUBLIC
   libtrossen_arm
-)
+  hardware_interface::hardware_interface
+  pluginlib::pluginlib
+  rclcpp::rclcpp
+  rclcpp_lifecycle::rclcpp_lifecycle)
 
 pluginlib_export_plugin_description_file(hardware_interface ${PROJECT_NAME}.xml)
 
@@ -56,6 +48,10 @@ endif()
 
 
 ament_export_targets(export_${PROJECT_NAME} HAS_LIBRARY_TARGET)
-ament_export_dependencies(${ROS_DEPENDENCIES})
+ament_export_dependencies(
+  hardware_interface
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle)
 ament_export_dependencies(libtrossen_arm)
 ament_package()
