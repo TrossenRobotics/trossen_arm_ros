@@ -51,25 +51,32 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
   std::vector<hardware_interface::InterfaceDescription> state_interfaces;
 
   // position_* in world frame (m, rad); velocity_* in base frame (m/s, rad/s);
-  // lift_position = height above bottom soft bound (m), lift_velocity in m/s, positive = up;
-  // *_velocity per swerve module drive (m/s), *_pivot_angle per swerve module (rad);
-  // battery_* named for battery_state_broadcaster: battery_voltage (V),
-  // battery_current (A, positive = discharging), battery_percentage (0-100),
-  // battery_temperature (deg C), battery_power_supply_status
+  // *_velocity per swerve module drive (m/s), *_pivot_angle per swerve module (rad)
   for (const char * name : {
       "position_x", "position_y", "position_yaw",
       "velocity_x", "velocity_y", "velocity_yaw",
-      "lift_position", "lift_velocity",
       "front_left_velocity", "front_left_pivot_angle",
       "front_right_velocity", "front_right_pivot_angle",
-      "back_velocity", "back_pivot_angle",
+      "back_velocity", "back_pivot_angle"})
+  {
+    InterfaceInfo interface_info;
+    interface_info.name = name;
+    interface_info.data_type = "double";
+    state_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
+  }
+
+  // Battery, named for battery_state_broadcaster (battery = <name>_battery):
+  // battery_voltage (V), battery_current (A, positive = discharging),
+  // battery_percentage (0-100), battery_temperature (deg C),
+  // battery_power_supply_status (sensor_msgs/BatteryState enum)
+  for (const char * name : {
       "battery_voltage", "battery_current", "battery_percentage",
       "battery_temperature", "battery_power_supply_status"})
   {
     InterfaceInfo interface_info;
     interface_info.name = name;
     interface_info.data_type = "double";
-    state_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
+    state_interfaces.push_back(InterfaceDescription(info_.name + "_battery", interface_info));
   }
 
   // IMU, named for imu_sensor_broadcaster (sensor_name = <name>_imu), in imu frame:
@@ -86,6 +93,15 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
     state_interfaces.push_back(InterfaceDescription(info_.name + "_imu", interface_info));
   }
 
+  // Lift, joint-style for joint_state_broadcaster / velocity_controllers (joint = <name>_lift):
+  // position = height above bottom soft bound (m), velocity in m/s, positive = up
+  for (const char * name : {"position", "velocity"}) {
+    InterfaceInfo interface_info;
+    interface_info.name = name;
+    interface_info.data_type = "double";
+    state_interfaces.push_back(InterfaceDescription(info_.name + "_lift", interface_info));
+  }
+
   return state_interfaces;
 }
 
@@ -94,13 +110,19 @@ TrossenBaseHardwareInterface::export_unlisted_command_interface_descriptions()
 {
   std::vector<hardware_interface::InterfaceDescription> command_interfaces;
 
-  // velocity_x/y in m/s, velocity_yaw in rad/s (base frame); lift_velocity in m/s, positive = up
-  for (const char * name : {"velocity_x", "velocity_y", "velocity_yaw", "lift_velocity"}) {
+  // velocity_x/y in m/s, velocity_yaw in rad/s (base frame)
+  for (const char * name : {"velocity_x", "velocity_y", "velocity_yaw"}) {
     InterfaceInfo interface_info;
     interface_info.name = name;
     interface_info.data_type = "double";
     command_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
   }
+
+  // Lift velocity in m/s, positive = up (joint = <name>_lift, for velocity_controllers)
+  InterfaceInfo lift_velocity_info;
+  lift_velocity_info.name = "velocity";
+  lift_velocity_info.data_type = "double";
+  command_interfaces.push_back(InterfaceDescription(info_.name + "_lift", lift_velocity_info));
 
   return command_interfaces;
 }
@@ -151,8 +173,11 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   set_state(n + "/velocity_x", odometry.velocity[0]);
   set_state(n + "/velocity_y", odometry.velocity[1]);
   set_state(n + "/velocity_yaw", odometry.velocity[2]);
-  set_state(n + "/lift_position", lift.position);
-  set_state(n + "/lift_velocity", lift.velocity);
+
+  const std::string lift_n = n + "_lift";
+  set_state(lift_n + "/position", lift.position);
+  set_state(lift_n + "/velocity", lift.velocity);
+
   const std::string imu_n = n + "_imu";
   set_state(imu_n + "/orientation.x", 0.0);
   set_state(imu_n + "/orientation.y", 0.0);
@@ -170,10 +195,12 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   set_state(n + "/front_right_pivot_angle", wheels.front_right_pivot_angle);
   set_state(n + "/back_velocity", wheels.back_velocity);
   set_state(n + "/back_pivot_angle", wheels.back_pivot_angle);
-  set_state(n + "/battery_voltage", battery.voltage);
-  set_state(n + "/battery_current", battery.current);
-  set_state(n + "/battery_percentage", battery.percent);
-  set_state(n + "/battery_temperature", battery.temperature);
+
+  const std::string battery_n = n + "_battery";
+  set_state(battery_n + "/battery_voltage", battery.voltage);
+  set_state(battery_n + "/battery_current", battery.current);
+  set_state(battery_n + "/battery_percentage", battery.percent);
+  set_state(battery_n + "/battery_temperature", battery.temperature);
 
   // Driver: 0=stationary, 1=charging, 2=discharging.
   // sensor_msgs/BatteryState: 0=UNKNOWN, 1=CHARGING, 2=DISCHARGING, 3=NOT_CHARGING.
@@ -184,7 +211,7 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
     case 2: power_supply_status = 2.0; break;
     default: break;  // UNKNOWN
   }
-  set_state(n + "/battery_power_supply_status", power_supply_status);
+  set_state(battery_n + "/battery_power_supply_status", power_supply_status);
 
 
   return return_type::OK;
@@ -200,7 +227,11 @@ return_type TrossenBaseHardwareInterface::write(const rclcpp::Time&, const rclcp
   if (!base_driver_->set_velocities({cmd("velocity_x"), cmd("velocity_y"), cmd("velocity_yaw")})) {
     RCLCPP_WARN(get_logger(), "Failed to send velocity command.");
   }
-  if (!base_driver_->set_lift_velocity(cmd("lift_velocity"))) {
+  double lift_velocity = get_command(info_.name + "_lift/velocity");
+  if (std::isnan(lift_velocity)) {
+    lift_velocity = 0.0;
+  }
+  if (!base_driver_->set_lift_velocity(lift_velocity)) {
     RCLCPP_WARN(get_logger(), "Failed to send lift velocity command.");
   }
   return return_type::OK;
