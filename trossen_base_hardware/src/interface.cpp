@@ -52,7 +52,6 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
 
   // position_* in world frame (m, rad); velocity_* in base frame (m/s, rad/s);
   // lift_position = height above bottom soft bound (m), lift_velocity in m/s, positive = up;
-  // imu_* in imu frame (rad/s, m/s^2; acceleration z includes gravity);
   // *_velocity per swerve module drive (m/s), *_pivot_angle per swerve module (rad);
   // battery_* named for battery_state_broadcaster: battery_voltage (V),
   // battery_current (A, positive = discharging), battery_percentage (0-100),
@@ -61,8 +60,6 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
       "position_x", "position_y", "position_yaw",
       "velocity_x", "velocity_y", "velocity_yaw",
       "lift_position", "lift_velocity",
-      "imu_angular_velocity_x", "imu_angular_velocity_y", "imu_angular_velocity_z",
-      "imu_linear_acceleration_x", "imu_linear_acceleration_y", "imu_linear_acceleration_z",
       "front_left_velocity", "front_left_pivot_angle",
       "front_right_velocity", "front_right_pivot_angle",
       "back_velocity", "back_pivot_angle",
@@ -73,6 +70,20 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
     interface_info.name = name;
     interface_info.data_type = "double";
     state_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
+  }
+
+  // IMU, named for imu_sensor_broadcaster (sensor_name = <name>_imu), in imu frame:
+  // orientation quaternion (yaw only, roll/pitch = 0), angular_velocity (rad/s),
+  // linear_acceleration (m/s^2, z includes gravity)
+  for (const char * name : {
+      "orientation.x", "orientation.y", "orientation.z", "orientation.w",
+      "angular_velocity.x", "angular_velocity.y", "angular_velocity.z",
+      "linear_acceleration.x", "linear_acceleration.y", "linear_acceleration.z"})
+  {
+    InterfaceInfo interface_info;
+    interface_info.name = name;
+    interface_info.data_type = "double";
+    state_interfaces.push_back(InterfaceDescription(info_.name + "_imu", interface_info));
   }
 
   return state_interfaces;
@@ -142,12 +153,17 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   set_state(n + "/velocity_yaw", odometry.velocity[2]);
   set_state(n + "/lift_position", lift.position);
   set_state(n + "/lift_velocity", lift.velocity);
-  set_state(n + "/imu_angular_velocity_x", imu.angular_velocity[0]);
-  set_state(n + "/imu_angular_velocity_y", imu.angular_velocity[1]);
-  set_state(n + "/imu_angular_velocity_z", imu.angular_velocity[2]);
-  set_state(n + "/imu_linear_acceleration_x", imu.linear_acceleration[0]);
-  set_state(n + "/imu_linear_acceleration_y", imu.linear_acceleration[1]);
-  set_state(n + "/imu_linear_acceleration_z", imu.linear_acceleration[2]);
+  const std::string imu_n = n + "_imu";
+  set_state(imu_n + "/orientation.x", 0.0);
+  set_state(imu_n + "/orientation.y", 0.0);
+  set_state(imu_n + "/orientation.z", std::sin(imu.yaw / 2.0));
+  set_state(imu_n + "/orientation.w", std::cos(imu.yaw / 2.0));
+  set_state(imu_n + "/angular_velocity.x", imu.angular_velocity[0]);
+  set_state(imu_n + "/angular_velocity.y", imu.angular_velocity[1]);
+  set_state(imu_n + "/angular_velocity.z", imu.angular_velocity[2]);
+  set_state(imu_n + "/linear_acceleration.x", imu.linear_acceleration[0]);
+  set_state(imu_n + "/linear_acceleration.y", imu.linear_acceleration[1]);
+  set_state(imu_n + "/linear_acceleration.z", imu.linear_acceleration[2]);
   set_state(n + "/front_left_velocity", wheels.front_left_velocity);
   set_state(n + "/front_left_pivot_angle", wheels.front_left_pivot_angle);
   set_state(n + "/front_right_velocity", wheels.front_right_velocity);
