@@ -1,0 +1,7 @@
+<library path="trossen_base_controllers">
+  <class name="trossen_base_controllers/HolonomicController"
+         type="trossen_base_controllers::HolonomicController"
+         base_class_type="controller_interface::ControllerInterface">
+    <description>Holonomic Drive controller for Trossen Base</description>
+  </class>
+</library>
