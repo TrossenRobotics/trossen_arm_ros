@@ -251,8 +251,7 @@ CallbackReturn TrossenBaseHardwareInterface::on_deactivate(const rclcpp_lifecycl
   return CallbackReturn::SUCCESS;
 }
 
-CallbackReturn
-TrossenBaseHardwareInterface::on_cleanup(const rclcpp_lifecycle::State&)
+CallbackReturn TrossenBaseHardwareInterface::on_cleanup(const rclcpp_lifecycle::State&)
 {
   if (base_driver_) {
     base_driver_->cleanup();
@@ -260,6 +259,21 @@ TrossenBaseHardwareInterface::on_cleanup(const rclcpp_lifecycle::State&)
   }
 
   return CallbackReturn::SUCCESS;
+}
+
+return_type TrossenBaseHardwareInterface::perform_command_mode_switch(
+  const std::vector<std::string> & start_interfaces,
+  const std::vector<std::string> & stop_interfaces)
+{
+  // Zero releases interfaces so write() stops the base/lift
+  for (const auto & name : stop_interfaces) {
+    set_command(name, 0.0);
+  }
+  // Zero newly claimed interfaces so doesn't inherit stale value
+  for (const auto & name : start_interfaces) {
+    set_command(name, 0.0);
+  }
+  return return_type::OK;
 }
 
 }  // namespace trossen_base_hardware

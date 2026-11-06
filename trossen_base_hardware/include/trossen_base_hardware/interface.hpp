@@ -80,6 +80,9 @@ public:
 
   return_type write(const rclcpp::Time & time, const rclcpp::Duration & duration) override;
 
+  return_type perform_command_mode_switch(const std::vector<std::string> & start_interfaces,
+    const std::vector<std::string> & stop_interfaces) override;
+
 protected:
   // The driver for the robot
   std::unique_ptr<trossen_base::TrossenBase> base_driver_{nullptr};
