@@ -28,8 +28,12 @@
 
 #include "trossen_base_hardware/interface.hpp"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
+#include <string>
+#include <unordered_map>
 
 namespace trossen_base_hardware
 {
@@ -83,12 +87,38 @@ TrossenBaseHardwareInterface::on_init(const HardwareComponentInterfaceParams& pa
     return CallbackReturn::ERROR;
   }
 
+  // Optional mock mode
+  std::unordered_map<std::string, std::string>::const_iterator mock_param =
+    info_.hardware_parameters.find("mock");
+  mock_ = mock_param != info_.hardware_parameters.end() && mock_param->second == "true";
+
+  // Lift position limits from the URDF <limit>, used to clamp the mock lift
+  lift_min_position_ = -std::numeric_limits<double>::infinity();
+  lift_max_position_ = std::numeric_limits<double>::infinity();
+  std::unordered_map<std::string, joint_limits::JointLimits>::const_iterator lift_limits =
+    info_.limits.find(info_.joints[INDEX_LIFT_].name);
+  if (lift_limits != info_.limits.end() && lift_limits->second.has_position_limits) {
+    lift_min_position_ = lift_limits->second.min_position;
+    lift_max_position_ = lift_limits->second.max_position;
+  }
+
   return CallbackReturn::SUCCESS;
+}
+
+double TrossenBaseHardwareInterface::get_command_or_zero(const std::string & interface_name) const
+{
+  const double value = get_command(interface_name);
+  return std::isnan(value) ? 0.0 : value;
 }
 
 CallbackReturn
 TrossenBaseHardwareInterface::on_configure(const rclcpp_lifecycle::State&)
 {
+  if (mock_) {
+    RCLCPP_INFO(get_logger(), "Mock mode: not connecting to the Trossen Base.");
+    return CallbackReturn::SUCCESS;
+  }
+
   RCLCPP_INFO(get_logger(), "Configuring the Trossen Base Driver...");
 
   base_driver_ = std::make_unique<trossen_base::TrossenBase>();
@@ -116,8 +146,13 @@ TrossenBaseHardwareInterface::on_activate(const rclcpp_lifecycle::State&)
   return CallbackReturn::SUCCESS;
 }
 
-return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp::Duration&)
+return_type TrossenBaseHardwareInterface::read(
+  const rclcpp::Time&, const rclcpp::Duration& period)
 {
+  if (mock_) {
+    return read_mock(period);
+  }
+
   trossen_base::PositionVelocityAcceleration odometry = base_driver_->get_odometry();
 
   const trossen_base::LiftState lift = base_driver_->get_lift_state();
@@ -187,26 +222,75 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   return return_type::OK;
 }
 
+return_type TrossenBaseHardwareInterface::read_mock(const rclcpp::Duration & period)
+{
+  const double dt = period.seconds();
+
+  // Base (gpio): velocity commands are in the base frame, so rotate by yaw before integrating
+  // into the odom-frame pose. Velocity states mirror the commands.
+  const ComponentInfo & base = info_.gpios[INDEX_BASE_];
+  std::array<double, 3> base_velocity{};
+  for (size_t i = 0; i < NUM_BASE_COMMANDS_; ++i) {
+    base_velocity[i] = get_command_or_zero(base.name + "/" + base.command_interfaces[i].name);
+  }
+  const double yaw = mock_base_position_[2];
+  mock_base_position_[0] +=
+    (base_velocity[0] * std::cos(yaw) - base_velocity[1] * std::sin(yaw)) * dt;
+  mock_base_position_[1] +=
+    (base_velocity[0] * std::sin(yaw) + base_velocity[1] * std::cos(yaw)) * dt;
+  mock_base_position_[2] += base_velocity[2] * dt;
+  for (size_t i = 0; i < 3; ++i) {
+    set_state(base.name + "/" + base.state_interfaces[i].name, mock_base_position_[i]);
+    set_state(base.name + "/" + base.state_interfaces[3 + i].name, base_velocity[i]);
+  }
+
+  // Lift: integrate the velocity command, clamped to the URDF position limits
+  const std::string & lift_joint = info_.joints[INDEX_LIFT_].name;
+  double lift_velocity = get_command_or_zero(lift_joint + "/" + HW_IF_VELOCITY);
+  const double lift_target = mock_lift_position_ + lift_velocity * dt;
+  mock_lift_position_ = std::clamp(lift_target, lift_min_position_, lift_max_position_);
+  if (mock_lift_position_ != lift_target) {
+    lift_velocity = 0.0;  // stopped at a limit
+  }
+  set_state(lift_joint + "/" + HW_IF_POSITION, mock_lift_position_);
+  set_state(lift_joint + "/" + HW_IF_VELOCITY, lift_velocity);
+
+  // Swerve modules: pivots and drives stay at their initial values
+
+  // IMU (sensor): yaw from the mock base, yaw rate from the command, gravity on z
+  const ComponentInfo & imu_sensor = info_.sensors[INDEX_IMU_];
+  const double imu_values[NUM_IMU_STATES_] = {
+    0.0, 0.0, std::sin(mock_base_position_[2] / 2.0), std::cos(mock_base_position_[2] / 2.0),
+    0.0, 0.0, base_velocity[2],
+    0.0, 0.0, 9.81};
+  for (size_t i = 0; i < NUM_IMU_STATES_; ++i) {
+    set_state(imu_sensor.name + "/" + imu_sensor.state_interfaces[i].name, imu_values[i]);
+  }
+
+  return return_type::OK;
+}
+
 return_type TrossenBaseHardwareInterface::write(const rclcpp::Time&, const rclcpp::Duration&)
 {
+  // Mock mode: commands are read back in read_mock(), nothing to send
+  if (mock_) {
+    return return_type::OK;
+  }
+
   // Base (gpio), by interface index: velocity x/y/yaw in base frame (m/s, rad/s).
   // Commands start as NaN until a controller writes, so treat NaN as 0.
   const ComponentInfo & base = info_.gpios[INDEX_BASE_];
   std::array<double, 3> base_velocity{};
   for (size_t i = 0; i < NUM_BASE_COMMANDS_; ++i) {
-    const double v = get_command(base.name + "/" + base.command_interfaces[i].name);
-    base_velocity[i] = std::isnan(v) ? 0.0 : v;
+    base_velocity[i] = get_command_or_zero(base.name + "/" + base.command_interfaces[i].name);
   }
   if (!base_driver_->set_velocities(base_velocity)) {
     RCLCPP_WARN(get_logger(), "Failed to send velocity command.");
   }
 
   // Lift velocity (m/s), positive = up
-  double lift_velocity = get_command(
-    info_.joints[INDEX_LIFT_].name + "/" + hardware_interface::HW_IF_VELOCITY);
-  if (std::isnan(lift_velocity)) {
-    lift_velocity = 0.0;
-  }
+  const double lift_velocity =
+    get_command_or_zero(info_.joints[INDEX_LIFT_].name + "/" + HW_IF_VELOCITY);
   if (!base_driver_->set_lift_velocity(lift_velocity)) {
     RCLCPP_WARN(get_logger(), "Failed to send lift velocity command.");
   }
@@ -215,11 +299,13 @@ return_type TrossenBaseHardwareInterface::write(const rclcpp::Time&, const rclcp
 
 CallbackReturn TrossenBaseHardwareInterface::on_deactivate(const rclcpp_lifecycle::State&)
 {
-  if (!base_driver_->set_velocities({0.0, 0.0, 0.0})) {
-    RCLCPP_WARN(get_logger(), "Failed to send zero-velocity command on deactivate");
-  }
-  if (!base_driver_->set_lift_velocity(0.0)) {
-    RCLCPP_WARN(get_logger(), "Failed to send zero lift velocity command on deactivate");
+  if (base_driver_) {
+    if (!base_driver_->set_velocities({0.0, 0.0, 0.0})) {
+      RCLCPP_WARN(get_logger(), "Failed to send zero-velocity command on deactivate");
+    }
+    if (!base_driver_->set_lift_velocity(0.0)) {
+      RCLCPP_WARN(get_logger(), "Failed to send zero lift velocity command on deactivate");
+    }
   }
 
   RCLCPP_INFO(get_logger(), "TrossenBaseDriver stopped.");

@@ -29,6 +29,7 @@
 #ifndef TROSSEN_BASE_HARDWARE__INTERFACE_HPP_
 #define TROSSEN_BASE_HARDWARE__INTERFACE_HPP_
 
+#include <array>
 #include <memory>
 #include <set>
 #include <string>
@@ -83,6 +84,12 @@ public:
     const std::vector<std::string> & stop_interfaces) override;
 
 protected:
+  // Mock mode read(): loops commands back into states without the driver
+  return_type read_mock(const rclcpp::Duration & period);
+
+  // Returns the command value, or 0 if no controller has written it yet (NaN)
+  double get_command_or_zero(const std::string & interface_name) const;
+
   // Index of each joint in the URDF <ros2_control> block (order matters)
   static constexpr size_t INDEX_LIFT_ = 0;
   static constexpr size_t INDEX_FRONT_LEFT_PIVOT_ = 1;
@@ -117,6 +124,17 @@ protected:
 
   // Drive wheel radius (m), converts drive velocity m/s -> rad/s
   double wheel_radius_ = 0.0;
+
+  // Mock mode: no driver, commands are looped back into states
+  bool mock_ = false;
+
+  // Mock base pose x, y, yaw in odom frame (m, rad), integrated from velocity commands
+  std::array<double, 3> mock_base_position_{};
+
+  // Mock lift position (m), integrated from velocity commands and clamped to the URDF limits
+  double mock_lift_position_ = 0.0;
+  double lift_min_position_ = 0.0;
+  double lift_max_position_ = 0.0;
 };
 
 }  // namespace trossen_base_hardware
