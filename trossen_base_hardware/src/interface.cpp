@@ -53,7 +53,10 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
   // position_* in world frame (m, rad); velocity_* in base frame (m/s, rad/s);
   // lift_position = height above bottom soft bound (m), lift_velocity in m/s, positive = up;
   // imu_* in imu frame (rad/s, m/s^2; acceleration z includes gravity);
-  // *_velocity per swerve module drive (m/s), *_pivot_angle per swerve module (rad)
+  // *_velocity per swerve module drive (m/s), *_pivot_angle per swerve module (rad);
+  // battery_* named for battery_state_broadcaster: battery_voltage (V),
+  // battery_current (A, positive = discharging), battery_percentage (0-100),
+  // battery_temperature (deg C), battery_power_supply_status
   for (const char * name : {
       "position_x", "position_y", "position_yaw",
       "velocity_x", "velocity_y", "velocity_yaw",
@@ -62,7 +65,9 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
       "imu_linear_acceleration_x", "imu_linear_acceleration_y", "imu_linear_acceleration_z",
       "front_left_velocity", "front_left_pivot_angle",
       "front_right_velocity", "front_right_pivot_angle",
-      "back_velocity", "back_pivot_angle"})
+      "back_velocity", "back_pivot_angle",
+      "battery_voltage", "battery_current", "battery_percentage",
+      "battery_temperature", "battery_power_supply_status"})
   {
     InterfaceInfo interface_info;
     interface_info.name = name;
@@ -126,6 +131,7 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   const trossen_base::LiftState lift = base_driver_->get_lift_state();
   const trossen_base::ImuState imu = base_driver_->get_imu_state();
   const trossen_base::WheelState wheels = base_driver_->get_wheel_state();
+  const trossen_base::BatteryState battery = base_driver_->get_battery_state();
 
   const std::string & n = info_.name;
   set_state(n + "/position_x", odometry.position[0]);
@@ -148,6 +154,21 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   set_state(n + "/front_right_pivot_angle", wheels.front_right_pivot_angle);
   set_state(n + "/back_velocity", wheels.back_velocity);
   set_state(n + "/back_pivot_angle", wheels.back_pivot_angle);
+  set_state(n + "/battery_voltage", battery.voltage);
+  set_state(n + "/battery_current", battery.current);
+  set_state(n + "/battery_percentage", battery.percent);
+  set_state(n + "/battery_temperature", battery.temperature);
+
+  // Driver: 0=stationary, 1=charging, 2=discharging.
+  // sensor_msgs/BatteryState: 0=UNKNOWN, 1=CHARGING, 2=DISCHARGING, 3=NOT_CHARGING.
+  double power_supply_status = 0.0;
+  switch (battery.charging_state) {
+    case 0: power_supply_status = 3.0; break;
+    case 1: power_supply_status = 1.0; break;
+    case 2: power_supply_status = 2.0; break;
+    default: break;  // UNKNOWN
+  }
+  set_state(n + "/battery_power_supply_status", power_supply_status);
 
 
   return return_type::OK;
