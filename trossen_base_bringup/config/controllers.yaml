@@ -1,0 +1,44 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50 # Hz
+    base_controller:
+      type: trossen_base_controllers/HolonomicController
+
+    lift_controller:
+      type: velocity_controllers/JointGroupVelocityController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    imu_sensor_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+    battery_state_broadcaster:
+      type: battery_state_broadcaster/BatteryStateBroadcaster
+
+base_controller:
+  ros__parameters:
+    velocity_x_interface: base/velocity_x
+    velocity_y_interface: base/velocity_y
+    velocity_yaw_interface: base/velocity_yaw
+
+lift_controller:
+  ros__parameters:
+    joints:
+      - lift
+
+imu_sensor_broadcaster:
+  ros__parameters:
+    sensor_name: imu
+    frame_id: imu_link
+
+battery_state_broadcaster:
+  ros__parameters:
+    batteries:
+      - battery
+    interfaces:
+      battery:
+        battery_current: true
+        battery_temperature: true
+        battery_percentage: true
+        battery_power_supply_status: true
