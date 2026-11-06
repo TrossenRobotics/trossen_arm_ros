@@ -28,6 +28,8 @@
 
 #include "trossen_base_hardware/interface.hpp"
 
+#include <cmath>
+
 namespace trossen_base_hardware
 {
 
@@ -48,11 +50,18 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
 {
   std::vector<hardware_interface::InterfaceDescription> state_interfaces;
 
-  InterfaceInfo position_x_interface;
-  position_x_interface.name = "position_x";
-  position_x_interface.data_type = "double";
-  state_interfaces.push_back(InterfaceDescription(info_.name, position_x_interface));
-
+  // position_* in world frame (m, rad); velocity_* in base frame (m/s, rad/s);
+  // lift_position = height above bottom soft bound (m), lift_velocity in m/s, positive = up
+  for (const char * name : {
+      "position_x", "position_y", "position_yaw",
+      "velocity_x", "velocity_y", "velocity_yaw",
+      "lift_position", "lift_velocity"})
+  {
+    InterfaceInfo interface_info;
+    interface_info.name = name;
+    interface_info.data_type = "double";
+    state_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
+  }
 
   return state_interfaces;
 }
@@ -62,11 +71,13 @@ TrossenBaseHardwareInterface::export_unlisted_command_interface_descriptions()
 {
   std::vector<hardware_interface::InterfaceDescription> command_interfaces;
 
-  InterfaceInfo velocity_x_interface;
-  velocity_x_interface.name = "velocity_x";
-  velocity_x_interface.data_type = "double";
-  command_interfaces.push_back(InterfaceDescription(info_.name, velocity_x_interface));
-
+  // velocity_x/y in m/s, velocity_yaw in rad/s (base frame); lift_velocity in m/s, positive = up
+  for (const char * name : {"velocity_x", "velocity_y", "velocity_yaw", "lift_velocity"}) {
+    InterfaceInfo interface_info;
+    interface_info.name = name;
+    interface_info.data_type = "double";
+    command_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
+  }
 
   return command_interfaces;
 }
@@ -105,7 +116,17 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
 {
   trossen_base::PositionVelocityAcceleration odometry = base_driver_->get_odometry();
 
-  set_state(info_.name + "/position_x", odometry.position[0]);
+  const trossen_base::LiftState lift = base_driver_->get_lift_state();
+
+  const std::string & n = info_.name;
+  set_state(n + "/position_x", odometry.position[0]);
+  set_state(n + "/position_y", odometry.position[1]);
+  set_state(n + "/position_yaw", odometry.position[2]);
+  set_state(n + "/velocity_x", odometry.velocity[0]);
+  set_state(n + "/velocity_y", odometry.velocity[1]);
+  set_state(n + "/velocity_yaw", odometry.velocity[2]);
+  set_state(n + "/lift_position", lift.position);
+  set_state(n + "/lift_velocity", lift.velocity);
 
 
   return return_type::OK;
@@ -113,13 +134,16 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
 
 return_type TrossenBaseHardwareInterface::write(const rclcpp::Time&, const rclcpp::Duration&)
 {
-  std::function<double(const std::string &)> cmd = [&](const std::string & n) {
+  auto cmd = [&](const std::string & n) {
     double v = get_command(info_.name + "/" + n);
     return std::isnan(v) ? 0.0 : v;   // commands start as NaN until a controller writes
   };
 
   if (!base_driver_->set_velocities({cmd("velocity_x"), cmd("velocity_y"), cmd("velocity_yaw")})) {
     RCLCPP_WARN(get_logger(), "Failed to send velocity command.");
+  }
+  if (!base_driver_->set_lift_velocity(cmd("lift_velocity"))) {
+    RCLCPP_WARN(get_logger(), "Failed to send lift velocity command.");
   }
   return return_type::OK;
 }
@@ -128,6 +152,9 @@ CallbackReturn TrossenBaseHardwareInterface::on_deactivate(const rclcpp_lifecycl
 {
   if (!base_driver_->set_velocities({0.0, 0.0, 0.0})) {
     RCLCPP_WARN(get_logger(), "Failed to send zero-velocity command on deactivate");
+  }
+  if (!base_driver_->set_lift_velocity(0.0)) {
+    RCLCPP_WARN(get_logger(), "Failed to send zero lift velocity command on deactivate");
   }
 
   RCLCPP_INFO(get_logger(), "TrossenBaseDriver stopped.");
@@ -138,8 +165,10 @@ CallbackReturn TrossenBaseHardwareInterface::on_deactivate(const rclcpp_lifecycl
 CallbackReturn
 TrossenBaseHardwareInterface::on_cleanup(const rclcpp_lifecycle::State&)
 {
-
-  base_driver_->cleanup();
+  if (base_driver_) {
+    base_driver_->cleanup();
+    base_driver_.reset();
+  }
 
   return CallbackReturn::SUCCESS;
 }
