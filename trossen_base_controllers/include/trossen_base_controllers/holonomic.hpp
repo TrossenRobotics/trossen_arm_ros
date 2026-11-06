@@ -38,7 +38,6 @@
 #include "rclcpp/subscription.hpp"
 #include "rclcpp/time.hpp"
 #include "realtime_tools/realtime_buffer.hpp"
-#include "trossen_base_hardware/interface.hpp"
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 using controller_interface::ControllerInterface;

@@ -3,17 +3,21 @@ project(trossen_base_controllers)
 
 find_package(ament_cmake REQUIRED)
 find_package(controller_interface REQUIRED)
+find_package(geometry_msgs REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(trossen_base_hardware REQUIRED)
+find_package(rclcpp_lifecycle REQUIRED)
+find_package(realtime_tools REQUIRED)
 
 set(ROS_DEPENDENCIES
   controller_interface
+  geometry_msgs
   hardware_interface
   pluginlib
   rclcpp
-  trossen_base_hardware
+  rclcpp_lifecycle
+  realtime_tools
 )
 
 include_directories(
