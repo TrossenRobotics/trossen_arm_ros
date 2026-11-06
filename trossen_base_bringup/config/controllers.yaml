@@ -17,6 +17,9 @@ controller_manager:
     battery_state_broadcaster:
       type: battery_state_broadcaster/BatteryStateBroadcaster
 
+    odometry_broadcaster:
+      type: trossen_base_controllers/OdometryBroadcaster
+
 base_controller:
   ros__parameters:
     velocity_x_interface: base/velocity_x
@@ -43,3 +46,17 @@ battery_state_broadcaster:
         battery_temperature: true
         battery_percentage: true
         battery_power_supply_status: true
+
+odometry_broadcaster:
+  ros__parameters:
+    position_x_interface: base/position_x
+    position_y_interface: base/position_y
+    position_yaw_interface: base/position_yaw
+    velocity_x_interface: base/velocity_x
+    velocity_y_interface: base/velocity_y
+    velocity_yaw_interface: base/velocity_yaw
+    odom_frame_id: odom
+    base_frame_id: base_footprint
+    enable_odom_tf: true  # false if robot_localization publishes odom -> base_footprint
+    pose_covariance_diagonal: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    twist_covariance_diagonal: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

@@ -5,19 +5,23 @@ find_package(ament_cmake REQUIRED)
 find_package(controller_interface REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(hardware_interface REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(realtime_tools REQUIRED)
+find_package(tf2_msgs REQUIRED)
 
 set(ROS_DEPENDENCIES
   controller_interface
   geometry_msgs
   hardware_interface
+  nav_msgs
   pluginlib
   rclcpp
   rclcpp_lifecycle
   realtime_tools
+  tf2_msgs
 )
 
 include_directories(
@@ -26,6 +30,7 @@ include_directories(
 
 add_library(${PROJECT_NAME} SHARED
   src/holonomic.cpp
+  src/odometry_broadcaster.cpp
 )
 
 ament_target_dependencies(${PROJECT_NAME}
