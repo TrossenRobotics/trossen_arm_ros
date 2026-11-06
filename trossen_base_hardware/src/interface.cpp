@@ -51,11 +51,18 @@ TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
   std::vector<hardware_interface::InterfaceDescription> state_interfaces;
 
   // position_* in world frame (m, rad); velocity_* in base frame (m/s, rad/s);
-  // lift_position = height above bottom soft bound (m), lift_velocity in m/s, positive = up
+  // lift_position = height above bottom soft bound (m), lift_velocity in m/s, positive = up;
+  // imu_* in imu frame (rad/s, m/s^2; acceleration z includes gravity);
+  // *_velocity per swerve module drive (m/s), *_pivot_angle per swerve module (rad)
   for (const char * name : {
       "position_x", "position_y", "position_yaw",
       "velocity_x", "velocity_y", "velocity_yaw",
-      "lift_position", "lift_velocity"})
+      "lift_position", "lift_velocity",
+      "imu_angular_velocity_x", "imu_angular_velocity_y", "imu_angular_velocity_z",
+      "imu_linear_acceleration_x", "imu_linear_acceleration_y", "imu_linear_acceleration_z",
+      "front_left_velocity", "front_left_pivot_angle",
+      "front_right_velocity", "front_right_pivot_angle",
+      "back_velocity", "back_pivot_angle"})
   {
     InterfaceInfo interface_info;
     interface_info.name = name;
@@ -117,6 +124,8 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   trossen_base::PositionVelocityAcceleration odometry = base_driver_->get_odometry();
 
   const trossen_base::LiftState lift = base_driver_->get_lift_state();
+  const trossen_base::ImuState imu = base_driver_->get_imu_state();
+  const trossen_base::WheelState wheels = base_driver_->get_wheel_state();
 
   const std::string & n = info_.name;
   set_state(n + "/position_x", odometry.position[0]);
@@ -127,6 +136,18 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   set_state(n + "/velocity_yaw", odometry.velocity[2]);
   set_state(n + "/lift_position", lift.position);
   set_state(n + "/lift_velocity", lift.velocity);
+  set_state(n + "/imu_angular_velocity_x", imu.angular_velocity[0]);
+  set_state(n + "/imu_angular_velocity_y", imu.angular_velocity[1]);
+  set_state(n + "/imu_angular_velocity_z", imu.angular_velocity[2]);
+  set_state(n + "/imu_linear_acceleration_x", imu.linear_acceleration[0]);
+  set_state(n + "/imu_linear_acceleration_y", imu.linear_acceleration[1]);
+  set_state(n + "/imu_linear_acceleration_z", imu.linear_acceleration[2]);
+  set_state(n + "/front_left_velocity", wheels.front_left_velocity);
+  set_state(n + "/front_left_pivot_angle", wheels.front_left_pivot_angle);
+  set_state(n + "/front_right_velocity", wheels.front_right_velocity);
+  set_state(n + "/front_right_pivot_angle", wheels.front_right_pivot_angle);
+  set_state(n + "/back_velocity", wheels.back_velocity);
+  set_state(n + "/back_pivot_angle", wheels.back_pivot_angle);
 
 
   return return_type::OK;
