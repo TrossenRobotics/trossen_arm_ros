@@ -1,6 +1,7 @@
 controller_manager:
   ros__parameters:
     update_rate: 50 # Hz
+    enforce_command_limits: true
     base_controller:
       type: trossen_base_controllers/HolonomicController
 
