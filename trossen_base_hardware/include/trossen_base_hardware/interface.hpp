@@ -50,23 +50,22 @@ namespace trossen_base_hardware
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
-using hardware_interface::InterfaceInfo;
-using hardware_interface::InterfaceDescription;
-using hardware_interface::HardwareInfo;
+using hardware_interface::ComponentInfo;
 using hardware_interface::HardwareComponentInterfaceParams;
+using hardware_interface::HardwareInfo;
+using hardware_interface::HW_IF_POSITION;
+using hardware_interface::HW_IF_VELOCITY;
+using hardware_interface::InterfaceInfo;
 using hardware_interface::return_type;
-using hardware_interface::StateInterface;
 
-
+// Every interface is defined in the URDF <ros2_control> block and accessed by index,
+// so the order of joints, sensors, gpios and their interfaces in the URDF matters.
 class TrossenBaseHardwareInterface : public hardware_interface::SystemInterface
 {
 public:
   RCLCPP_SHARED_PTR_DEFINITIONS(TrossenBaseHardwareInterface)
 
   CallbackReturn on_init(const HardwareComponentInterfaceParams & params) override;
-
-  std::vector<hardware_interface::InterfaceDescription> export_unlisted_state_interface_descriptions() override;
-  std::vector<hardware_interface::InterfaceDescription> export_unlisted_command_interface_descriptions() override;
 
   CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
@@ -84,9 +83,40 @@ public:
     const std::vector<std::string> & stop_interfaces) override;
 
 protected:
+  // Index of each joint in the URDF <ros2_control> block (order matters)
+  static constexpr size_t INDEX_LIFT_ = 0;
+  static constexpr size_t INDEX_FRONT_LEFT_PIVOT_ = 1;
+  static constexpr size_t INDEX_FRONT_LEFT_DRIVE_ = 2;
+  static constexpr size_t INDEX_FRONT_RIGHT_PIVOT_ = 3;
+  static constexpr size_t INDEX_FRONT_RIGHT_DRIVE_ = 4;
+  static constexpr size_t INDEX_BACK_PIVOT_ = 5;
+  static constexpr size_t INDEX_BACK_DRIVE_ = 6;
+  static constexpr size_t NUM_JOINTS_ = 7;
+
+  // Index of each sensor in the URDF <ros2_control> block (order matters)
+  static constexpr size_t INDEX_IMU_ = 0;
+  static constexpr size_t INDEX_BATTERY_ = 1;
+  static constexpr size_t NUM_SENSORS_ = 2;
+
+  // Index of each gpio in the URDF <ros2_control> block (order matters)
+  static constexpr size_t INDEX_BASE_ = 0;
+  static constexpr size_t NUM_GPIOS_ = 1;
+
+  // Number of interfaces accessed by index (order matters):
+  // IMU states: orientation x/y/z/w, angular_velocity x/y/z, linear_acceleration x/y/z
+  static constexpr size_t NUM_IMU_STATES_ = 10;
+  // Battery states: voltage, current, percentage, temperature, power_supply_status
+  static constexpr size_t NUM_BATTERY_STATES_ = 5;
+  // Base commands: velocity x/y/yaw
+  static constexpr size_t NUM_BASE_COMMANDS_ = 3;
+  // Base states: position x/y/yaw, velocity x/y/yaw
+  static constexpr size_t NUM_BASE_STATES_ = 6;
+
   // The driver for the robot
   std::unique_ptr<trossen_base::TrossenBase> base_driver_{nullptr};
 
+  // Drive wheel radius (m), converts drive velocity m/s -> rad/s
+  double wheel_radius_ = 0.0;
 };
 
 }  // namespace trossen_base_hardware

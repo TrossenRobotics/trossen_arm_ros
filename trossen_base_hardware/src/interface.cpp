@@ -28,6 +28,7 @@
 
 #include "trossen_base_hardware/interface.hpp"
 
+#include <array>
 #include <cmath>
 
 namespace trossen_base_hardware
@@ -42,89 +43,47 @@ TrossenBaseHardwareInterface::on_init(const HardwareComponentInterfaceParams& pa
     return CallbackReturn::ERROR;
   }
 
+  try {
+    wheel_radius_ = std::stod(info_.hardware_parameters.at("wheel_radius"));
+  } catch (const std::out_of_range &) {
+    RCLCPP_FATAL(get_logger(), "Missing hardware parameter 'wheel_radius'");
+    return CallbackReturn::ERROR;
+  } catch (const std::invalid_argument &) {
+    RCLCPP_FATAL(get_logger(), "Hardware parameter 'wheel_radius' is not a number");
+    return CallbackReturn::ERROR;
+  }
+
+  // Must be positive, it is divided by in read()
+  if (wheel_radius_ <= 0.0) {
+    RCLCPP_FATAL(get_logger(), "Hardware parameter 'wheel_radius' must be > 0");
+    return CallbackReturn::ERROR;
+  }
+
+  // Components are accessed by index in read()/write(), so the URDF must list exactly these:
+  // joints: lift, fl_pivot, fl_drive, fr_pivot, fr_drive, b_pivot, b_drive
+  // sensors: imu, battery
+  // gpios: base
+  if (info_.joints.size() != NUM_JOINTS_ || info_.sensors.size() != NUM_SENSORS_ ||
+    info_.gpios.size() != NUM_GPIOS_)
+  {
+    RCLCPP_FATAL(get_logger(),
+      "Expected %zu joints, %zu sensors, %zu gpios in <ros2_control>, got %zu, %zu, %zu",
+      NUM_JOINTS_, NUM_SENSORS_, NUM_GPIOS_,
+      info_.joints.size(), info_.sensors.size(), info_.gpios.size());
+    return CallbackReturn::ERROR;
+  }
+
+  // IMU, battery and base interfaces are also accessed by index, so check their counts
+  if (info_.sensors[INDEX_IMU_].state_interfaces.size() != NUM_IMU_STATES_ ||
+    info_.sensors[INDEX_BATTERY_].state_interfaces.size() != NUM_BATTERY_STATES_ ||
+    info_.gpios[INDEX_BASE_].command_interfaces.size() != NUM_BASE_COMMANDS_ ||
+    info_.gpios[INDEX_BASE_].state_interfaces.size() != NUM_BASE_STATES_)
+  {
+    RCLCPP_FATAL(get_logger(), "IMU, battery or base has the wrong number of interfaces");
+    return CallbackReturn::ERROR;
+  }
+
   return CallbackReturn::SUCCESS;
-}
-
-std::vector<hardware_interface::InterfaceDescription>
-TrossenBaseHardwareInterface::export_unlisted_state_interface_descriptions()
-{
-  std::vector<hardware_interface::InterfaceDescription> state_interfaces;
-
-  // position_* in world frame (m, rad); velocity_* in base frame (m/s, rad/s);
-  // *_velocity per swerve module drive (m/s), *_pivot_angle per swerve module (rad)
-  for (const char * name : {
-      "position_x", "position_y", "position_yaw",
-      "velocity_x", "velocity_y", "velocity_yaw",
-      "front_left_velocity", "front_left_pivot_angle",
-      "front_right_velocity", "front_right_pivot_angle",
-      "back_velocity", "back_pivot_angle"})
-  {
-    InterfaceInfo interface_info;
-    interface_info.name = name;
-    interface_info.data_type = "double";
-    state_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
-  }
-
-  // Battery, named for battery_state_broadcaster (battery = <name>_battery):
-  // battery_voltage (V), battery_current (A, positive = discharging),
-  // battery_percentage (0-100), battery_temperature (deg C),
-  // battery_power_supply_status (sensor_msgs/BatteryState enum)
-  for (const char * name : {
-      "battery_voltage", "battery_current", "battery_percentage",
-      "battery_temperature", "battery_power_supply_status"})
-  {
-    InterfaceInfo interface_info;
-    interface_info.name = name;
-    interface_info.data_type = "double";
-    state_interfaces.push_back(InterfaceDescription(info_.name + "_battery", interface_info));
-  }
-
-  // IMU, named for imu_sensor_broadcaster (sensor_name = <name>_imu), in imu frame:
-  // orientation quaternion (yaw only, roll/pitch = 0), angular_velocity (rad/s),
-  // linear_acceleration (m/s^2, z includes gravity)
-  for (const char * name : {
-      "orientation.x", "orientation.y", "orientation.z", "orientation.w",
-      "angular_velocity.x", "angular_velocity.y", "angular_velocity.z",
-      "linear_acceleration.x", "linear_acceleration.y", "linear_acceleration.z"})
-  {
-    InterfaceInfo interface_info;
-    interface_info.name = name;
-    interface_info.data_type = "double";
-    state_interfaces.push_back(InterfaceDescription(info_.name + "_imu", interface_info));
-  }
-
-  // Lift, joint-style for joint_state_broadcaster / velocity_controllers (joint = <name>_lift):
-  // position = height above bottom soft bound (m), velocity in m/s, positive = up
-  for (const char * name : {"position", "velocity"}) {
-    InterfaceInfo interface_info;
-    interface_info.name = name;
-    interface_info.data_type = "double";
-    state_interfaces.push_back(InterfaceDescription(info_.name + "_lift", interface_info));
-  }
-
-  return state_interfaces;
-}
-
-std::vector<hardware_interface::InterfaceDescription>
-TrossenBaseHardwareInterface::export_unlisted_command_interface_descriptions()
-{
-  std::vector<hardware_interface::InterfaceDescription> command_interfaces;
-
-  // velocity_x/y in m/s, velocity_yaw in rad/s (base frame)
-  for (const char * name : {"velocity_x", "velocity_y", "velocity_yaw"}) {
-    InterfaceInfo interface_info;
-    interface_info.name = name;
-    interface_info.data_type = "double";
-    command_interfaces.push_back(InterfaceDescription(info_.name, interface_info));
-  }
-
-  // Lift velocity in m/s, positive = up (joint = <name>_lift, for velocity_controllers)
-  InterfaceInfo lift_velocity_info;
-  lift_velocity_info.name = "velocity";
-  lift_velocity_info.data_type = "double";
-  command_interfaces.push_back(InterfaceDescription(info_.name + "_lift", lift_velocity_info));
-
-  return command_interfaces;
 }
 
 CallbackReturn
@@ -166,43 +125,49 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
   const trossen_base::WheelState wheels = base_driver_->get_wheel_state();
   const trossen_base::BatteryState battery = base_driver_->get_battery_state();
 
-  const std::string & n = info_.name;
-  set_state(n + "/position_x", odometry.position[0]);
-  set_state(n + "/position_y", odometry.position[1]);
-  set_state(n + "/position_yaw", odometry.position[2]);
-  set_state(n + "/velocity_x", odometry.velocity[0]);
-  set_state(n + "/velocity_y", odometry.velocity[1]);
-  set_state(n + "/velocity_yaw", odometry.velocity[2]);
+  // Base (gpio), by interface index: position x/y/yaw in odom frame (m, rad),
+  // velocity x/y/yaw in base frame (m/s, rad/s)
+  const ComponentInfo & base = info_.gpios[INDEX_BASE_];
+  for (size_t i = 0; i < 3; ++i) {
+    set_state(base.name + "/" + base.state_interfaces[i].name, odometry.position[i]);
+    set_state(base.name + "/" + base.state_interfaces[3 + i].name, odometry.velocity[i]);
+  }
 
-  const std::string lift_n = n + "_lift";
-  set_state(lift_n + "/position", lift.position);
-  set_state(lift_n + "/velocity", lift.velocity);
+  // Lift: position (m) above bottom soft bound, velocity (m/s), positive = up
+  const std::string & lift_joint = info_.joints[INDEX_LIFT_].name;
+  set_state(lift_joint + "/" + HW_IF_POSITION, lift.position);
+  set_state(lift_joint + "/" + HW_IF_VELOCITY, lift.velocity);
 
-  const std::string imu_n = n + "_imu";
-  set_state(imu_n + "/orientation.x", 0.0);
-  set_state(imu_n + "/orientation.y", 0.0);
-  set_state(imu_n + "/orientation.z", std::sin(imu.yaw / 2.0));
-  set_state(imu_n + "/orientation.w", std::cos(imu.yaw / 2.0));
-  set_state(imu_n + "/angular_velocity.x", imu.angular_velocity[0]);
-  set_state(imu_n + "/angular_velocity.y", imu.angular_velocity[1]);
-  set_state(imu_n + "/angular_velocity.z", imu.angular_velocity[2]);
-  set_state(imu_n + "/linear_acceleration.x", imu.linear_acceleration[0]);
-  set_state(imu_n + "/linear_acceleration.y", imu.linear_acceleration[1]);
-  set_state(imu_n + "/linear_acceleration.z", imu.linear_acceleration[2]);
-  set_state(n + "/front_left_velocity", wheels.front_left_velocity);
-  set_state(n + "/front_left_pivot_angle", wheels.front_left_pivot_angle);
-  set_state(n + "/front_right_velocity", wheels.front_right_velocity);
-  set_state(n + "/front_right_pivot_angle", wheels.front_right_pivot_angle);
-  set_state(n + "/back_velocity", wheels.back_velocity);
-  set_state(n + "/back_pivot_angle", wheels.back_pivot_angle);
+  // Swerve modules: pivot angle (rad); drive velocity m/s -> rad/s.
+  // Drive position is not tracked and stays at its initial value.
+  const std::string & fl_pivot = info_.joints[INDEX_FRONT_LEFT_PIVOT_].name;
+  const std::string & fl_drive = info_.joints[INDEX_FRONT_LEFT_DRIVE_].name;
+  const std::string & fr_pivot = info_.joints[INDEX_FRONT_RIGHT_PIVOT_].name;
+  const std::string & fr_drive = info_.joints[INDEX_FRONT_RIGHT_DRIVE_].name;
+  const std::string & b_pivot = info_.joints[INDEX_BACK_PIVOT_].name;
+  const std::string & b_drive = info_.joints[INDEX_BACK_DRIVE_].name;
+  set_state(fl_pivot + "/" + HW_IF_POSITION, wheels.front_left_pivot_angle);
+  set_state(fl_drive + "/" + HW_IF_VELOCITY, wheels.front_left_velocity / wheel_radius_);
+  set_state(fr_pivot + "/" + HW_IF_POSITION, wheels.front_right_pivot_angle);
+  set_state(fr_drive + "/" + HW_IF_VELOCITY, wheels.front_right_velocity / wheel_radius_);
+  set_state(b_pivot + "/" + HW_IF_POSITION, wheels.back_pivot_angle);
+  set_state(b_drive + "/" + HW_IF_VELOCITY, wheels.back_velocity / wheel_radius_);
 
-  const std::string battery_n = n + "_battery";
-  set_state(battery_n + "/battery_voltage", battery.voltage);
-  set_state(battery_n + "/battery_current", battery.current);
-  set_state(battery_n + "/battery_percentage", battery.percent);
-  set_state(battery_n + "/battery_temperature", battery.temperature);
+  // IMU (sensor), by interface index, in imu_link frame: orientation x/y/z/w from yaw only
+  // (roll/pitch = 0), angular_velocity x/y/z (rad/s), linear_acceleration x/y/z
+  // (m/s^2, z includes gravity)
+  const ComponentInfo & imu_sensor = info_.sensors[INDEX_IMU_];
+  const double imu_values[NUM_IMU_STATES_] = {
+    0.0, 0.0, std::sin(imu.yaw / 2.0), std::cos(imu.yaw / 2.0),
+    imu.angular_velocity[0], imu.angular_velocity[1], imu.angular_velocity[2],
+    imu.linear_acceleration[0], imu.linear_acceleration[1], imu.linear_acceleration[2]};
+  for (size_t i = 0; i < NUM_IMU_STATES_; ++i) {
+    set_state(imu_sensor.name + "/" + imu_sensor.state_interfaces[i].name, imu_values[i]);
+  }
 
-  // Driver: 0=stationary, 1=charging, 2=discharging.
+  // Battery (sensor), by interface index: voltage (V), current (A, positive = discharging),
+  // percentage (0-100), temperature (deg C), power_supply_status.
+  // Driver charging_state: 0=stationary, 1=charging, 2=discharging.
   // sensor_msgs/BatteryState: 0=UNKNOWN, 1=CHARGING, 2=DISCHARGING, 3=NOT_CHARGING.
   double power_supply_status = 0.0;
   switch (battery.charging_state) {
@@ -211,23 +176,34 @@ return_type TrossenBaseHardwareInterface::read(const rclcpp::Time&, const rclcpp
     case 2: power_supply_status = 2.0; break;
     default: break;  // UNKNOWN
   }
-  set_state(battery_n + "/battery_power_supply_status", power_supply_status);
-
+  const ComponentInfo & battery_sensor = info_.sensors[INDEX_BATTERY_];
+  const double battery_values[NUM_BATTERY_STATES_] = {
+    battery.voltage, battery.current, battery.percent, battery.temperature, power_supply_status};
+  for (size_t i = 0; i < NUM_BATTERY_STATES_; ++i) {
+    set_state(battery_sensor.name + "/" + battery_sensor.state_interfaces[i].name,
+      battery_values[i]);
+  }
 
   return return_type::OK;
 }
 
 return_type TrossenBaseHardwareInterface::write(const rclcpp::Time&, const rclcpp::Duration&)
 {
-  auto cmd = [&](const std::string & n) {
-    double v = get_command(info_.name + "/" + n);
-    return std::isnan(v) ? 0.0 : v;   // commands start as NaN until a controller writes
-  };
-
-  if (!base_driver_->set_velocities({cmd("velocity_x"), cmd("velocity_y"), cmd("velocity_yaw")})) {
+  // Base (gpio), by interface index: velocity x/y/yaw in base frame (m/s, rad/s).
+  // Commands start as NaN until a controller writes, so treat NaN as 0.
+  const ComponentInfo & base = info_.gpios[INDEX_BASE_];
+  std::array<double, 3> base_velocity{};
+  for (size_t i = 0; i < NUM_BASE_COMMANDS_; ++i) {
+    const double v = get_command(base.name + "/" + base.command_interfaces[i].name);
+    base_velocity[i] = std::isnan(v) ? 0.0 : v;
+  }
+  if (!base_driver_->set_velocities(base_velocity)) {
     RCLCPP_WARN(get_logger(), "Failed to send velocity command.");
   }
-  double lift_velocity = get_command(info_.name + "_lift/velocity");
+
+  // Lift velocity (m/s), positive = up
+  double lift_velocity = get_command(
+    info_.joints[INDEX_LIFT_].name + "/" + hardware_interface::HW_IF_VELOCITY);
   if (std::isnan(lift_velocity)) {
     lift_velocity = 0.0;
   }
@@ -266,11 +242,11 @@ return_type TrossenBaseHardwareInterface::perform_command_mode_switch(
   const std::vector<std::string> & stop_interfaces)
 {
   // Zero releases interfaces so write() stops the base/lift
-  for (const auto & name : stop_interfaces) {
+  for (const std::string & name : stop_interfaces) {
     set_command(name, 0.0);
   }
   // Zero newly claimed interfaces so doesn't inherit stale value
-  for (const auto & name : start_interfaces) {
+  for (const std::string & name : start_interfaces) {
     set_command(name, 0.0);
   }
   return return_type::OK;
