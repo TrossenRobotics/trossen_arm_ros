@@ -33,9 +33,9 @@ namespace trossen_base_controllers
 
 CallbackReturn HolonomicController::on_init()
 {
-  auto_declare<std::string>("velocity_x_interface", "trossen_base/velocity_x");
-  auto_declare<std::string>("velocity_y_interface", "trossen_base/velocity_y");
-  auto_declare<std::string>("velocity_yaw_interface", "trossen_base/velocity_yaw");
+  auto_declare<std::string>("velocity_x_interface", "base/velocity_x");
+  auto_declare<std::string>("velocity_y_interface", "base/velocity_y");
+  auto_declare<std::string>("velocity_yaw_interface", "base/velocity_yaw");
   return CallbackReturn::SUCCESS;
 }
 
