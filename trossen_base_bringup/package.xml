@@ -17,7 +17,10 @@
   <depend>imu_sensor_broadcaster</depend>
   <depend>launch_ros</depend>
   <depend>launch</depend>
+  <exec_depend>geometry_msgs</exec_depend>
   <exec_depend>pointcloud_to_laserscan</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
   <depend>trossen_arm_description</depend>
   <depend>trossen_base_controllers</depend>
   <depend>trossen_base_hardware</depend>
