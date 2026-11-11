@@ -156,6 +156,8 @@ def generate_launch_description() -> LaunchDescription:
             'robot_description': LaunchConfiguration('robot_description'),
             'use_joint_pub_gui': 'false',
             'use_rviz': LaunchConfiguration('use_rviz'),
+            'rvizconfig': PathJoinSubstitution([
+                    FindPackageShare('trossen_base_bringup'), 'rviz', 'trossen_base.rviz']),
         }.items(),
     )
 
