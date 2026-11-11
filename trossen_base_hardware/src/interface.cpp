@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -39,6 +40,7 @@ namespace trossen_base_hardware
 {
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+using namespace std::chrono_literals;
 
 CallbackReturn
 TrossenBaseHardwareInterface::on_init(const HardwareComponentInterfaceParams& params)
@@ -128,6 +130,15 @@ TrossenBaseHardwareInterface::on_configure(const rclcpp_lifecycle::State&)
   } catch (const std::exception & e) {
     RCLCPP_FATAL(get_logger(), "Failed to configure TrossenBaseDriver: %s", e.what());
     return CallbackReturn::ERROR;
+  }
+
+  // Start lidar publisher
+  if (get_node())
+  {
+    // TODO (@schromya): Make this configurable via parameter?
+    lidar_publisher_ = get_node()->create_publisher<sensor_msgs::msg::LaserScan>("/scan", 10);
+    // TODO (@schromya): Read more often and don't publish duplicates??
+    lidar_timer_ = get_node()->create_wall_timer(100ms, [this]() { lidar_timer_callback(); });
   }
 
   RCLCPP_INFO(get_logger(), "TrossenBaseDriver configured.");
@@ -336,6 +347,19 @@ return_type TrossenBaseHardwareInterface::perform_command_mode_switch(
     set_command(name, 0.0);
   }
   return return_type::OK;
+}
+
+
+void TrossenBaseHardwareInterface::lidar_timer_callback()
+{
+  if (get_node()) {
+    sensor_msgs::msg::LaserScan msg;
+    trossen_base::PointCloud cloud = base_driver_->get_lidar_pointcloud();
+    // TODO: Fill in laserscan message
+    lidar_publisher_->publish(msg);
+
+    // TODO (@schromya): simulate mock hardware
+  }
 }
 
 }  // namespace trossen_base_hardware
