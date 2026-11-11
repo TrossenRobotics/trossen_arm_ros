@@ -44,7 +44,8 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "rclcpp/logger.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/laser_scan.hpp"
+#include "sensor_msgs/msg/point_cloud2.hpp"
+#include "sensor_msgs/point_cloud2_iterator.hpp"
 
 namespace trossen_base_hardware
 {
@@ -92,10 +93,12 @@ protected:
   double get_command_or_zero(const std::string & interface_name) const;
 
   void lidar_timer_callback();
+  trossen_base::PointCloud mock_lidar_pointcloud() const;
 
   // Lidar pointcloud publisher
   rclcpp::TimerBase::SharedPtr lidar_timer_;
-  rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr lidar_publisher_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr lidar_publisher_;
+  int64_t last_lidar_timestamp_ms_{0};
 
   // Index of each joint in the URDF <ros2_control> block (order matters)
   static constexpr size_t INDEX_LIFT_ = 0;
@@ -134,6 +137,9 @@ protected:
 
   // Mock mode: no driver, commands are looped back into states
   bool mock_ = false;
+
+  // Topic for the lidar PointCloud2, set by the optional "lidar_topic" hardware parameter
+  std::string lidar_topic_ = "lidar/points";
 
   // Mock base pose x, y, yaw in odom frame (m, rad), integrated from velocity commands
   std::array<double, 3> mock_base_position_{};
