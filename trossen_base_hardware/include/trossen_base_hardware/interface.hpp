@@ -44,6 +44,7 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "rclcpp/logger.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/laser_scan.hpp"
 
 namespace trossen_base_hardware
 {
@@ -89,6 +90,12 @@ protected:
 
   // Returns the command value, or 0 if no controller has written it yet (NaN)
   double get_command_or_zero(const std::string & interface_name) const;
+
+  void lidar_timer_callback();
+
+  // Lidar pointcloud publisher
+  rclcpp::TimerBase::SharedPtr lidar_timer_;
+  rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr lidar_publisher_;
 
   // Index of each joint in the URDF <ros2_control> block (order matters)
   static constexpr size_t INDEX_LIFT_ = 0;
