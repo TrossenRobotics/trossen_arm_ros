@@ -143,6 +143,32 @@ def generate_launch_description() -> LaunchDescription:
             )
         )
 
+    # Converts the lidar PointCloud2 (base_link frame) into a LaserScan in lidar_link for Nav2 and
+    # SLAM. Values are for the Slamtec RPLidar C1.
+    pointcloud_to_laserscan_node = Node(
+        package='pointcloud_to_laserscan',
+        executable='pointcloud_to_laserscan_node',
+        name='pointcloud_to_laserscan',
+        remappings=[
+            ('cloud_in', '/lidar/points'),
+            ('scan', '/scan'),
+        ],
+        parameters=[{
+            'target_frame': 'lidar_link',
+            'transform_tolerance': 0.01,
+            'min_height': -0.05,  # In target_frame, lidar points lie near z = 0
+            'max_height': 0.05,
+            'angle_min': -2.763,  # Equivalent to the base driver's min/max angle filters
+            'angle_max': -0.380,
+            'angle_increment': 0.0126,  # 0.72 deg
+            'scan_time': 0.1,  # C1 spins at ~10 Hz
+            'range_min': 0.05,
+            'range_max': 12.0,
+            'use_inf': True,
+        }],
+        output={'both': 'screen'},
+    )
+
     description_launch_include = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             PathJoinSubstitution([
@@ -163,6 +189,7 @@ def generate_launch_description() -> LaunchDescription:
 
     return LaunchDescription(declared_arguments + [
         controller_manager_node,
+        pointcloud_to_laserscan_node,
         description_launch_include,
         RegisterEventHandler(
             OnProcessStart(
