@@ -125,7 +125,6 @@ TrossenBaseHardwareInterface::on_configure(const rclcpp_lifecycle::State&)
 {
   if (mock_) {
     RCLCPP_INFO(get_logger(), "Mock mode: not connecting to the Trossen Base.");
-    return CallbackReturn::SUCCESS;
   } else {
     RCLCPP_INFO(get_logger(), "Configuring the Trossen Base Driver...");
 
