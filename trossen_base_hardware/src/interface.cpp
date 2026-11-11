@@ -123,7 +123,24 @@ double TrossenBaseHardwareInterface::get_command_or_zero(const std::string & int
 CallbackReturn
 TrossenBaseHardwareInterface::on_configure(const rclcpp_lifecycle::State&)
 {
-  // Start lidar publisher (real and mock modes)
+  if (mock_) {
+    RCLCPP_INFO(get_logger(), "Mock mode: not connecting to the Trossen Base.");
+    return CallbackReturn::SUCCESS;
+  } else {
+    RCLCPP_INFO(get_logger(), "Configuring the Trossen Base Driver...");
+
+    base_driver_ = std::make_unique<trossen_base::TrossenBase>();
+    try {
+      base_driver_->configure(true, false);
+    } catch (const std::exception & e) {
+      RCLCPP_FATAL(get_logger(), "Failed to configure TrossenBaseDriver: %s", e.what());
+      return CallbackReturn::ERROR;
+    }
+
+    RCLCPP_INFO(get_logger(), "TrossenBaseDriver configured.");
+  }
+
+  // Start lidar publisher
   if (get_node())
   {
     lidar_publisher_ =
@@ -131,24 +148,6 @@ TrossenBaseHardwareInterface::on_configure(const rclcpp_lifecycle::State&)
     // Poll lidar at 20hz, but will publish closer to 10hz as lidar driver only updates every 100ms
     lidar_timer_ = get_node()->create_wall_timer(50ms, [this]() { lidar_timer_callback(); });
   }
-
-  if (mock_) {
-    RCLCPP_INFO(get_logger(), "Mock mode: not connecting to the Trossen Base.");
-    return CallbackReturn::SUCCESS;
-  }
-
-  RCLCPP_INFO(get_logger(), "Configuring the Trossen Base Driver...");
-
-  base_driver_ = std::make_unique<trossen_base::TrossenBase>();
-
-  try {
-    base_driver_->configure(false, false);
-  } catch (const std::exception & e) {
-    RCLCPP_FATAL(get_logger(), "Failed to configure TrossenBaseDriver: %s", e.what());
-    return CallbackReturn::ERROR;
-  }
-
-  RCLCPP_INFO(get_logger(), "TrossenBaseDriver configured.");
 
   return CallbackReturn::SUCCESS;
 }
