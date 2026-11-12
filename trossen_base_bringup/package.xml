@@ -11,7 +11,6 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <depend>battery_state_broadcaster</depend>
   <depend>controller_manager</depend>
   <depend>joint_state_broadcaster</depend>
   <depend>imu_sensor_broadcaster</depend>

@@ -42,10 +42,15 @@ namespace trossen_base_hardware
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 using namespace std::chrono_literals;
 
-CallbackReturn
-TrossenBaseHardwareInterface::on_init(const HardwareComponentInterfaceParams& params)
+TrossenBaseHardwareInterface::~TrossenBaseHardwareInterface()
 {
-  if (hardware_interface::SystemInterface::on_init(params) != CallbackReturn::SUCCESS) {
+  stop_lidar_node();
+}
+
+CallbackReturn
+TrossenBaseHardwareInterface::on_init(const HardwareInfo & info)
+{
+  if (hardware_interface::SystemInterface::on_init(info) != CallbackReturn::SUCCESS) {
     return CallbackReturn::ERROR;
   }
 
@@ -101,23 +106,117 @@ TrossenBaseHardwareInterface::on_init(const HardwareComponentInterfaceParams& pa
     lidar_topic_ = lidar_topic_param->second;
   }
 
-  // Lift position limits from the URDF <limit>, used to clamp the mock lift
-  lift_min_position_ = -std::numeric_limits<double>::infinity();
-  lift_max_position_ = std::numeric_limits<double>::infinity();
-  std::unordered_map<std::string, joint_limits::JointLimits>::const_iterator lift_limits =
-    info_.limits.find(info_.joints[INDEX_LIFT_].name);
-  if (lift_limits != info_.limits.end() && lift_limits->second.has_position_limits) {
-    lift_min_position_ = lift_limits->second.min_position;
-    lift_max_position_ = lift_limits->second.max_position;
+  // Allocate storage for every interface in the URDF, using its initial_value if given.
+  // Commands start as NaN until a controller writes them.
+  for (const std::vector<ComponentInfo> * components :
+    {&info_.joints, &info_.sensors, &info_.gpios})
+  {
+    for (const ComponentInfo & component : *components) {
+      for (const InterfaceInfo & interface : component.state_interfaces) {
+        double initial_value = 0.0;
+        try {
+          if (!interface.initial_value.empty()) {
+            initial_value = std::stod(interface.initial_value);
+          }
+        } catch (const std::exception &) {
+          RCLCPP_FATAL(get_logger(), "Invalid initial_value for '%s/%s'",
+            component.name.c_str(), interface.name.c_str());
+          return CallbackReturn::ERROR;
+        }
+        state_values_[component.name + "/" + interface.name] = initial_value;
+      }
+      for (const InterfaceInfo & interface : component.command_interfaces) {
+        command_values_[component.name + "/" + interface.name] =
+          std::numeric_limits<double>::quiet_NaN();
+      }
+    }
   }
 
   return CallbackReturn::SUCCESS;
+}
+
+std::vector<StateInterface> TrossenBaseHardwareInterface::export_state_interfaces()
+{
+  std::vector<StateInterface> state_interfaces;
+  for (const std::vector<ComponentInfo> * components :
+    {&info_.joints, &info_.sensors, &info_.gpios})
+  {
+    for (const ComponentInfo & component : *components) {
+      for (const InterfaceInfo & interface : component.state_interfaces) {
+        state_interfaces.emplace_back(
+          component.name, interface.name,
+          &state_values_.at(component.name + "/" + interface.name));
+      }
+    }
+  }
+  return state_interfaces;
+}
+
+std::vector<CommandInterface> TrossenBaseHardwareInterface::export_command_interfaces()
+{
+  std::vector<CommandInterface> command_interfaces;
+  for (const std::vector<ComponentInfo> * components :
+    {&info_.joints, &info_.sensors, &info_.gpios})
+  {
+    for (const ComponentInfo & component : *components) {
+      for (const InterfaceInfo & interface : component.command_interfaces) {
+        command_interfaces.emplace_back(
+          component.name, interface.name,
+          &command_values_.at(component.name + "/" + interface.name));
+      }
+    }
+  }
+  return command_interfaces;
+}
+
+void TrossenBaseHardwareInterface::set_state(const std::string & interface_name, double value)
+{
+  state_values_.at(interface_name) = value;
+}
+
+double TrossenBaseHardwareInterface::get_command(const std::string & interface_name) const
+{
+  return command_values_.at(interface_name);
+}
+
+void TrossenBaseHardwareInterface::set_command(const std::string & interface_name, double value)
+{
+  command_values_.at(interface_name) = value;
 }
 
 double TrossenBaseHardwareInterface::get_command_or_zero(const std::string & interface_name) const
 {
   const double value = get_command(interface_name);
   return std::isnan(value) ? 0.0 : value;
+}
+
+void TrossenBaseHardwareInterface::start_lidar_node()
+{
+  stop_lidar_node();
+
+  lidar_node_ = std::make_shared<rclcpp::Node>("trossen_base_hardware");
+  lidar_publisher_ =
+    lidar_node_->create_publisher<sensor_msgs::msg::PointCloud2>(lidar_topic_, 10);
+  // Poll lidar at 20hz, but will publish closer to 10hz as lidar driver only updates every 100ms
+  lidar_timer_ = lidar_node_->create_wall_timer(50ms, [this]() {lidar_timer_callback();});
+
+  lidar_executor_ = std::make_shared<rclcpp::executors::SingleThreadedExecutor>();
+  lidar_executor_->add_node(lidar_node_);
+  lidar_executor_thread_ = std::thread([this]() {lidar_executor_->spin();});
+}
+
+void TrossenBaseHardwareInterface::stop_lidar_node()
+{
+  if (lidar_executor_) {
+    lidar_executor_->cancel();
+  }
+  if (lidar_executor_thread_.joinable()) {
+    lidar_executor_thread_.join();
+  }
+  lidar_timer_.reset();
+  lidar_publisher_.reset();
+  lidar_executor_.reset();
+  lidar_node_.reset();
 }
 
 CallbackReturn
@@ -140,13 +239,7 @@ TrossenBaseHardwareInterface::on_configure(const rclcpp_lifecycle::State&)
   }
 
   // Start lidar publisher
-  if (get_node())
-  {
-    lidar_publisher_ =
-      get_node()->create_publisher<sensor_msgs::msg::PointCloud2>(lidar_topic_, 10);
-    // Poll lidar at 20hz, but will publish closer to 10hz as lidar driver only updates every 100ms
-    lidar_timer_ = get_node()->create_wall_timer(50ms, [this]() { lidar_timer_callback(); });
-  }
+  start_lidar_node();
 
   return CallbackReturn::SUCCESS;
 }
@@ -260,14 +353,10 @@ return_type TrossenBaseHardwareInterface::read_mock(const rclcpp::Duration & per
     set_state(base.name + "/" + base.state_interfaces[3 + i].name, base_velocity[i]);
   }
 
-  // Lift: integrate the velocity command, clamped to the URDF position limits
+  // Lift: integrate the velocity command (position is not limited)
   const std::string & lift_joint = info_.joints[INDEX_LIFT_].name;
-  double lift_velocity = get_command_or_zero(lift_joint + "/" + HW_IF_VELOCITY);
-  const double lift_target = mock_lift_position_ + lift_velocity * dt;
-  mock_lift_position_ = std::clamp(lift_target, lift_min_position_, lift_max_position_);
-  if (mock_lift_position_ != lift_target) {
-    lift_velocity = 0.0;  // stopped at a limit
-  }
+  const double lift_velocity = get_command_or_zero(lift_joint + "/" + HW_IF_VELOCITY);
+  mock_lift_position_ += lift_velocity * dt;
   set_state(lift_joint + "/" + HW_IF_POSITION, mock_lift_position_);
   set_state(lift_joint + "/" + HW_IF_VELOCITY, lift_velocity);
 
@@ -331,6 +420,9 @@ CallbackReturn TrossenBaseHardwareInterface::on_deactivate(const rclcpp_lifecycl
 
 CallbackReturn TrossenBaseHardwareInterface::on_cleanup(const rclcpp_lifecycle::State&)
 {
+  // Stop the lidar timer before the driver it reads from is destroyed
+  stop_lidar_node();
+
   if (base_driver_) {
     base_driver_->cleanup();
     base_driver_.reset();

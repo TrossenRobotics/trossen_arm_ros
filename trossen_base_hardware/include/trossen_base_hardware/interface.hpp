@@ -33,6 +33,8 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <thread>
+#include <unordered_map>
 #include <vector>
 
 #include "hardware_interface/hardware_info.hpp"
@@ -53,13 +55,14 @@ namespace trossen_base_hardware
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
+using hardware_interface::CommandInterface;
 using hardware_interface::ComponentInfo;
-using hardware_interface::HardwareComponentInterfaceParams;
 using hardware_interface::HardwareInfo;
 using hardware_interface::HW_IF_POSITION;
 using hardware_interface::HW_IF_VELOCITY;
 using hardware_interface::InterfaceInfo;
 using hardware_interface::return_type;
+using hardware_interface::StateInterface;
 
 // Every interface is defined in the URDF <ros2_control> block and accessed by index,
 // so the order of joints, sensors, gpios and their interfaces in the URDF matters.
@@ -68,7 +71,13 @@ class TrossenBaseHardwareInterface : public hardware_interface::SystemInterface
 public:
   RCLCPP_SHARED_PTR_DEFINITIONS(TrossenBaseHardwareInterface)
 
-  CallbackReturn on_init(const HardwareComponentInterfaceParams & params) override;
+  ~TrossenBaseHardwareInterface() override;
+
+  CallbackReturn on_init(const HardwareInfo & info) override;
+
+  std::vector<StateInterface> export_state_interfaces() override;
+
+  std::vector<CommandInterface> export_command_interfaces() override;
 
   CallbackReturn on_configure(const rclcpp_lifecycle::State & previous_state) override;
 
@@ -86,6 +95,25 @@ public:
     const std::vector<std::string> & stop_interfaces) override;
 
 protected:
+  std::unordered_map<std::string, double> state_values_;
+  std::unordered_map<std::string, double> command_values_;
+
+  void set_state(const std::string & interface_name, double value);
+  double get_command(const std::string & interface_name) const;
+  void set_command(const std::string & interface_name, double value);
+
+  // Logger
+  static rclcpp::Logger get_logger()
+  {
+    return rclcpp::get_logger("trossen_base_hardware");
+  }
+
+  void start_lidar_node();
+  void stop_lidar_node();
+  rclcpp::Node::SharedPtr lidar_node_;
+  rclcpp::executors::SingleThreadedExecutor::SharedPtr lidar_executor_;
+  std::thread lidar_executor_thread_;
+
   // Mock mode read(): loops commands back into states without the driver
   return_type read_mock(const rclcpp::Duration & period);
 
@@ -144,10 +172,8 @@ protected:
   // Mock base pose x, y, yaw in odom frame (m, rad), integrated from velocity commands
   std::array<double, 3> mock_base_position_{};
 
-  // Mock lift position (m), integrated from velocity commands and clamped to the URDF limits
+  // Mock lift position (m), integrated from velocity commands
   double mock_lift_position_ = 0.0;
-  double lift_min_position_ = 0.0;
-  double lift_max_position_ = 0.0;
 };
 
 }  // namespace trossen_base_hardware

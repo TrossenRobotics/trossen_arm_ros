@@ -29,7 +29,6 @@
 #include "trossen_base_controllers/odometry_broadcaster.hpp"
 
 #include <cmath>
-#include <optional>
 
 namespace trossen_base_controllers
 {
@@ -138,11 +137,10 @@ return_type OdometryBroadcaster::update(const rclcpp::Time & time, const rclcpp:
   // Read all states but skip this cycle if any value is unavailable
   double values[NUM_STATES_];
   for (size_t i = 0; i < NUM_STATES_; ++i) {
-    const std::optional<double> value = state_interfaces_[i].get_optional();
-    if (!value.has_value()) {
+    values[i] = state_interfaces_[i].get_value();
+    if (std::isnan(values[i])) {
       return return_type::OK;
     }
-    values[i] = value.value();
   }
 
   // Planar base: orientation is a rotation of yaw about z
@@ -159,7 +157,10 @@ return_type OdometryBroadcaster::update(const rclcpp::Time & time, const rclcpp:
   odom_msg_.twist.twist.linear.x = values[INDEX_VELOCITY_X_];
   odom_msg_.twist.twist.linear.y = values[INDEX_VELOCITY_Y_];
   odom_msg_.twist.twist.angular.z = values[INDEX_VELOCITY_YAW_];
-  realtime_odom_publisher_->try_publish(odom_msg_);
+  if (realtime_odom_publisher_->trylock()) {
+    realtime_odom_publisher_->msg_ = odom_msg_;
+    realtime_odom_publisher_->unlockAndPublish();
+  }
 
   // Transform odom -> base
   if (enable_odom_tf_) {
@@ -169,7 +170,10 @@ return_type OdometryBroadcaster::update(const rclcpp::Time & time, const rclcpp:
     transform.transform.translation.y = values[INDEX_POSITION_Y_];
     transform.transform.rotation.z = qz;
     transform.transform.rotation.w = qw;
-    realtime_tf_publisher_->try_publish(tf_msg_);
+    if (realtime_tf_publisher_->trylock()) {
+      realtime_tf_publisher_->msg_ = tf_msg_;
+      realtime_tf_publisher_->unlockAndPublish();
+    }
   }
 
   return return_type::OK;

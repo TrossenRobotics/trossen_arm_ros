@@ -128,7 +128,6 @@ def generate_launch_description() -> LaunchDescription:
         'lift_controller',
         'joint_state_broadcaster',
         'imu_sensor_broadcaster',
-        'battery_state_broadcaster',
         'odometry_broadcaster',
     ]:
         controller_spawner_nodes.append(

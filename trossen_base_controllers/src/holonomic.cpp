@@ -83,12 +83,9 @@ return_type HolonomicController::update( const rclcpp::Time&, const rclcpp::Dura
 
   const geometry_msgs::msg::Twist & cmd = *cmd_vel_buffer_.readFromRT();
 
-  if (!command_interfaces_[0].set_value(cmd.linear.x) ||
-      !command_interfaces_[1].set_value(cmd.linear.y) ||
-      !command_interfaces_[2].set_value(cmd.angular.z))
-  {
-    RCLCPP_WARN(get_node()->get_logger(), "Failed to set velocity command");
-  }
+  command_interfaces_[0].set_value(cmd.linear.x);
+  command_interfaces_[1].set_value(cmd.linear.y);
+  command_interfaces_[2].set_value(cmd.angular.z);
 
   return return_type::OK;
 }
