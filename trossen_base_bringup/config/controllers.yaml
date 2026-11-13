@@ -13,6 +13,9 @@ controller_manager:
     imu_sensor_broadcaster:
       type: imu_sensor_broadcaster/IMUSensorBroadcaster
 
+    battery_state_broadcaster:
+      type: battery_state_broadcaster/BatteryStateBroadcaster
+
     odometry_broadcaster:
       type: trossen_base_controllers/OdometryBroadcaster
 
@@ -31,6 +34,17 @@ imu_sensor_broadcaster:
   ros__parameters:
     sensor_name: imu
     frame_id: imu_link
+
+battery_state_broadcaster:
+  ros__parameters:
+    batteries:
+      - battery
+    interfaces:
+      battery:
+        battery_current: true
+        battery_temperature: true
+        battery_percentage: true
+        battery_power_supply_status: true
 
 odometry_broadcaster:
   ros__parameters:
