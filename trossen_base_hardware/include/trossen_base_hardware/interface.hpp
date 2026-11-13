@@ -30,6 +30,7 @@
 #define TROSSEN_BASE_HARDWARE__INTERFACE_HPP_
 
 #include <array>
+#include <limits>
 #include <memory>
 #include <set>
 #include <string>
@@ -174,6 +175,11 @@ protected:
 
   // Mock lift position (m), integrated from velocity commands
   double mock_lift_position_ = 0.0;
+
+  // Mock lift position limits (m), set by the optional "lift_min_position" and
+  // "lift_max_position" hardware parameters (unlimited if not set)
+  double lift_min_position_ = -std::numeric_limits<double>::infinity();
+  double lift_max_position_ = std::numeric_limits<double>::infinity();
 };
 
 }  // namespace trossen_base_hardware

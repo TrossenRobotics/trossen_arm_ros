@@ -106,6 +106,29 @@ TrossenBaseHardwareInterface::on_init(const HardwareInfo & info)
     lidar_topic_ = lidar_topic_param->second;
   }
 
+  // Optional mock lift position limits
+  for (const auto & [name, limit] : {
+      std::pair<std::string, double *>{"lift_min_position", &lift_min_position_},
+      std::pair<std::string, double *>{"lift_max_position", &lift_max_position_}})
+  {
+    std::unordered_map<std::string, std::string>::const_iterator param =
+      info_.hardware_parameters.find(name);
+    if (param == info_.hardware_parameters.end()) {
+      continue;
+    }
+    try {
+      *limit = std::stod(param->second);
+    } catch (const std::exception &) {
+      RCLCPP_FATAL(get_logger(), "Hardware parameter '%s' is not a number", name.c_str());
+      return CallbackReturn::ERROR;
+    }
+  }
+  if (lift_min_position_ > lift_max_position_) {
+    RCLCPP_FATAL(get_logger(),
+      "Hardware parameter 'lift_min_position' must be <= 'lift_max_position'");
+    return CallbackReturn::ERROR;
+  }
+
   // Allocate storage for every interface in the URDF, using its initial_value if given.
   // Commands start as NaN until a controller writes them.
   for (const std::vector<ComponentInfo> * components :
@@ -353,10 +376,14 @@ return_type TrossenBaseHardwareInterface::read_mock(const rclcpp::Duration & per
     set_state(base.name + "/" + base.state_interfaces[3 + i].name, base_velocity[i]);
   }
 
-  // Lift: integrate the velocity command (position is not limited)
+  // Lift: integrate the velocity command, clamped to the position limits
   const std::string & lift_joint = info_.joints[INDEX_LIFT_].name;
-  const double lift_velocity = get_command_or_zero(lift_joint + "/" + HW_IF_VELOCITY);
-  mock_lift_position_ += lift_velocity * dt;
+  const double lift_command = get_command_or_zero(lift_joint + "/" + HW_IF_VELOCITY);
+  const double previous_lift_position = mock_lift_position_;
+  mock_lift_position_ = std::clamp(
+    mock_lift_position_ + lift_command * dt, lift_min_position_, lift_max_position_);
+  // Velocity reports the actual motion, so it is 0 while pushing against a limit
+  const double lift_velocity = dt > 0.0 ? (mock_lift_position_ - previous_lift_position) / dt : 0.0;
   set_state(lift_joint + "/" + HW_IF_POSITION, mock_lift_position_);
   set_state(lift_joint + "/" + HW_IF_VELOCITY, lift_velocity);
 
