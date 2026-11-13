@@ -14,6 +14,8 @@ install(
 
 install(
   PROGRAMS
+    demo/base_io_demo.py
+    demo/joystick_teleop.py
     demo/keyboard_teleop.py
   DESTINATION
     lib/${PROJECT_NAME}
