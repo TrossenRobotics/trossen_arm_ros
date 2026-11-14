@@ -50,7 +50,7 @@ Optional Parameters:
     angular_speed (float, default 1.0): Base rotation speed at full stick, in rad/s.
     turbo_multiplier (float, default 1.5): Speed multiplier while turbo is held.
     lift_speed (float, default 0.1): Lift speed at full trigger, in m/s.
-    joy_timeout (float, default 0.5): Seconds without a Joy message before the robot is
+    joy_timeout (float, default 5.0): Seconds without a Joy message before the robot is
         stopped. Must exceed the joy_node publish period (autorepeat_rate, 20 Hz by default).
     cmd_vel_topic (str, default '/base_controller/cmd_vel'): Topic for base Twist commands.
     lift_topic (str, default '/lift_controller/commands'): Topic for lift velocity commands.
@@ -103,7 +103,7 @@ class JoystickTeleop(Node):
         joy_topic = self.declare_parameter('joy_topic', '/joy').value
 
         # Deadman: if joy_node stops publishing, stop the robot
-        self.joy_timeout = self.declare_parameter('joy_timeout', 0.5).value
+        self.joy_timeout = self.declare_parameter('joy_timeout', 5.0).value
         self.last_joy_time = None
         self.moving = False  # True while the last published command was non-zero
 
