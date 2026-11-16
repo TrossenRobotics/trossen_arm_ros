@@ -48,17 +48,18 @@ from moveit_configs_utils import MoveItConfigsBuilder
 def launch_setup(context, *args, **kwargs):
     rviz_config_file_launch_arg = LaunchConfiguration('rviz_config_file')
     use_moveit_rviz_launch_arg = LaunchConfiguration('use_moveit_rviz')
+    robot_model = LaunchConfiguration('robot_model').perform(context)
 
     moveit_configs = (
         MoveItConfigsBuilder(
-            robot_name='wxai',
+            robot_name=robot_model,
             package_name='trossen_arm_moveit',
         )
         .robot_description(
             file_path=PathJoinSubstitution([
                 FindPackageShare('trossen_arm_description'),
                 'urdf',
-                'wxai.urdf.xacro',
+                f'{robot_model}.urdf.xacro',
             ]).perform(context),
             mappings={
                 'arm_variant': LaunchConfiguration('arm_variant'),
@@ -67,7 +68,7 @@ def launch_setup(context, *args, **kwargs):
             }
         )
         .robot_description_semantic(
-            file_path='config/wxai.srdf.xacro',
+            file_path=f'config/{robot_model}.srdf.xacro',
             mappings={
                 'variant': LaunchConfiguration('arm_variant'),
             },
@@ -192,8 +193,8 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'robot_model',
             default_value='wxai',
-            choices=('wxai'),
-            description='model codename of the Trossen Arm such as `wxai`.'
+            choices=('wxai', 'wxpro'),
+            description='model codename of the Trossen Arm such as `wxai` or `wxpro`.'
         )
     )
     declared_arguments.append(
