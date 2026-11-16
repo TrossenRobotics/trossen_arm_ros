@@ -28,10 +28,43 @@
 
 #include "trossen_arm_hardware/interface.hpp"
 
+#include <optional>
+
 namespace trossen_arm_hardware
 {
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
+namespace
+{
+
+/// @brief Look up the standard end effector for a model and variant ('base', 'leader', 'follower')
+/// @return The end effector, or std::nullopt if the combination is not supported
+std::optional<trossen_arm::EndEffector> get_standard_end_effector(
+  trossen_arm::Model model,
+  const std::string & variant)
+{
+  using trossen_arm::Model;
+  using trossen_arm::StandardEndEffector;
+
+  switch (model) {
+    case Model::wxai_v0:
+      if (variant == END_EFFECTOR_BASE) {return StandardEndEffector::wxai_v0_base;}
+      if (variant == END_EFFECTOR_LEADER) {return StandardEndEffector::wxai_v0_leader;}
+      if (variant == END_EFFECTOR_FOLLOWER) {return StandardEndEffector::wxai_v0_follower;}
+      break;
+    case Model::pro:
+      if (variant == END_EFFECTOR_BASE) {return StandardEndEffector::pro_base;}
+      if (variant == END_EFFECTOR_LEADER) {return StandardEndEffector::pro_leader;}
+      if (variant == END_EFFECTOR_FOLLOWER) {return StandardEndEffector::pro_follower;}
+      break;
+    default:
+      break;
+  }
+  return std::nullopt;
+}
+
+}  // namespace
 
 CallbackReturn
 TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & info)
@@ -55,34 +88,36 @@ TrossenArmHardwareInterface::on_init(const hardware_interface::HardwareInfo & in
   } catch (const std::invalid_argument & /*e*/) {
     RCLCPP_FATAL(
       get_logger(),
-      "Invalid 'robot_model' value specified: '%d'.", static_cast<int>(robot_model_));
+      "Invalid 'robot_model' value specified: '%s'.",
+      info.hardware_parameters.at("robot_model").c_str());
     return CallbackReturn::FAILURE;
   }
 
   // Get robot end effector
   try {
     end_effector_str_ = info.hardware_parameters.at("end_effector");
-    if (end_effector_str_ == END_EFFECTOR_BASE) {
-      end_effector_ = trossen_arm::StandardEndEffector::wxai_v0_base;
-    } else if (end_effector_str_ == END_EFFECTOR_FOLLOWER) {
-      end_effector_ = trossen_arm::StandardEndEffector::wxai_v0_follower;
-    } else if (end_effector_str_ == END_EFFECTOR_LEADER) {
-      end_effector_ = trossen_arm::StandardEndEffector::wxai_v0_leader;
-    } else {
-      RCLCPP_FATAL(
-        get_logger(),
-        "Invalid 'end_effector' value specified: '%s'.", end_effector_str_.c_str());
-      return CallbackReturn::FAILURE;
-    }
-    RCLCPP_INFO(
-      get_logger(),
-      "Parameter 'end_effector' set to '%s'.", end_effector_str_.c_str());
   } catch (const std::out_of_range & /*e*/) {
     RCLCPP_FATAL(
       get_logger(),
       "Required parameter 'end_effector' not specified.");
     return CallbackReturn::FAILURE;
   }
+
+  const std::optional<trossen_arm::EndEffector> end_effector =
+    get_standard_end_effector(robot_model_, end_effector_str_);
+  if (!end_effector) {
+    RCLCPP_FATAL(
+      get_logger(),
+      "Unsupported 'end_effector' '%s' for 'robot_model' '%d'. Supported models are "
+      "0 (wxai_v0) and 4 (pro), each with variants 'base', 'leader', or 'follower'.",
+      end_effector_str_.c_str(),
+      static_cast<int>(robot_model_));
+    return CallbackReturn::FAILURE;
+  }
+  end_effector_ = *end_effector;
+  RCLCPP_INFO(
+    get_logger(),
+    "Parameter 'end_effector' set to '%s'.", end_effector_str_.c_str());
 
   // Get robot IP address
   try {
