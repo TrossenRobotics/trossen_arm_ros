@@ -30,8 +30,6 @@
 Launch a Trossen Base together with its two follower arms.
 """
 
-from dataclasses import dataclass
-
 from launch import LaunchDescription
 from launch.action import Action
 from launch.actions import (
@@ -54,39 +52,24 @@ from launch_ros.parameter_descriptions import ParameterFile, ParameterValue
 from launch_ros.substitutions import FindPackageShare
 
 
-@dataclass
-class ArmMount:
-    """Where an arm is mounted on the base lift."""
-
-    side: str
-    """Arm side, `left` or `right`. Used for the namespace and the joint/link prefix."""
-
-    xyz: tuple[float, float, float]
-    """Position of the arm base_link in lift_link in meters."""
-
-    rpy: tuple[float, float, float]
-    """Orientation of the arm base_link in lift_link in radians."""
+ARM_SIDES = ('left', 'right')
 
 
-# Mounting poses on the Rivet lift. Must match the *_mount_joint origins in rivet.urdf.xacro.
-ARM_MOUNTS = [
-    ArmMount(side='left', xyz=(0.0615, 0.275, 0.031), rpy=(0.0, 0.0, 0.0)),
-    ArmMount(side='right', xyz=(0.0615, -0.275, 0.031), rpy=(0.0, 0.0, 0.0)),
-]
-
-
-def generate_launch_description_for_arm(mount: ArmMount) -> list[Action]:
+def generate_launch_description_for_arm(side: str) -> list[Action]:
     """
     Generate the launch actions for a single arm running in its own namespace.
 
+    The base's description publishes lift_link -> follower_<side>_base_link (the mount joint), and
+    this arm's robot_state_publisher publishes everything from follower_<side>_base_link down.
+
     Args:
-        mount (ArmMount): Side and mounting pose of the arm.
+        side (str): Arm side, `left` or `right`. Used for the namespace and the joint/link prefix.
 
     Returns:
-        list[Action]: Static transform, controller manager, robot_state_publisher, and the
-            controller spawners (started once the controller manager is up).
+        list[Action]: Controller manager, robot_state_publisher, and the controller spawners
+            (started once the controller manager is up).
     """
-    namespace = f'follower_{mount.side}'
+    namespace = f'follower_{side}'
     prefix = f'{namespace}_'
 
     robot_description = Command([
@@ -99,26 +82,9 @@ def generate_launch_description_for_arm(mount: ArmMount) -> list[Action]:
         'prefix:=', prefix, ' ',
         'variant:=', LaunchConfiguration('arm_variant'), ' ',
         'ros2_control_hardware_type:=',
-        LaunchConfiguration(f'{mount.side}_arm_ros2_control_hardware_type'), ' ',
-        'ip_address:=', LaunchConfiguration(f'{mount.side}_arm_ip_address'),
+        LaunchConfiguration(f'{side}_arm_ros2_control_hardware_type'), ' ',
+        'ip_address:=', LaunchConfiguration(f'{side}_arm_ip_address'),
     ])
-
-    mount_transform_node = Node(
-        package='tf2_ros',
-        executable='static_transform_publisher',
-        name=f'{namespace}_mount_transform_publisher',
-        arguments=[
-            '--x', str(mount.xyz[0]),
-            '--y', str(mount.xyz[1]),
-            '--z', str(mount.xyz[2]),
-            '--roll', str(mount.rpy[0]),
-            '--pitch', str(mount.rpy[1]),
-            '--yaw', str(mount.rpy[2]),
-            '--frame-id', 'lift_link',
-            '--child-frame-id', f'{prefix}base_link',
-        ],
-        output={'both': 'screen'},
-    )
 
     controller_manager_node = Node(
         package='controller_manager',
@@ -172,7 +138,6 @@ def generate_launch_description_for_arm(mount: ArmMount) -> list[Action]:
         )
 
     return [
-        mount_transform_node,
         controller_manager_node,
         robot_state_publisher_node,
         RegisterEventHandler(
@@ -196,7 +161,7 @@ def generate_launch_description() -> LaunchDescription:
     )
     declared_arguments.append(
         DeclareLaunchArgument(
-            'ros2_control_hardware_type',
+            'base_ros2_control_hardware_type',
             default_value='real',
             choices=('real', 'mock_components'),
             description='Use real or mocked hardware interface for the base.'
@@ -206,7 +171,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             'arm_model',
             default_value='wxpro',
-            choices=('wxpro'),
+            choices=('wxpro',),
             description='model codename of both arms.'
         )
     )
@@ -214,7 +179,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             'arm_variant',
             default_value='follower',
-            choices=('base', 'follower'),
+            choices=('follower'),
             description='End effector variant of both arms.',
         )
     )
@@ -269,7 +234,7 @@ def generate_launch_description() -> LaunchDescription:
         ),
         launch_arguments={
             'robot_model': LaunchConfiguration('robot_model'),
-            'ros2_control_hardware_type': LaunchConfiguration('ros2_control_hardware_type'),
+            'ros2_control_hardware_type': LaunchConfiguration('base_ros2_control_hardware_type'),
             'use_rviz': 'false',
             'robot_description': Command([
                 FindExecutable(name='xacro'), ' ',
@@ -279,14 +244,15 @@ def generate_launch_description() -> LaunchDescription:
                     LaunchConfiguration('robot_model'),
                 ]), '.urdf.xacro ',
                 'include_arms:=false ',
-                'ros2_control_hardware_type:=', LaunchConfiguration('ros2_control_hardware_type'),
+                'ros2_control_hardware_type:=',
+                LaunchConfiguration('base_ros2_control_hardware_type'),
             ]),
         }.items(),
     )])
 
     arm_actions: list[Action] = []
-    for mount in ARM_MOUNTS:
-        arm_actions.extend(generate_launch_description_for_arm(mount))
+    for side in ARM_SIDES:
+        arm_actions.extend(generate_launch_description_for_arm(side))
 
     rviz2_node = Node(
         condition=IfCondition(LaunchConfiguration('use_rviz')),
