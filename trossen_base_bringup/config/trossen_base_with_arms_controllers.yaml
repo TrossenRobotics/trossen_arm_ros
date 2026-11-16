@@ -1,0 +1,99 @@
+# Controllers for the arms mounted on a Trossen Base.
+
+# Left arm
+
+/follower_left/controller_manager:
+  ros__parameters:
+    update_rate: 100 # Hz
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    gripper_controller:
+      type: parallel_gripper_action_controller/GripperActionController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+/follower_left/arm_controller:
+  ros__parameters:
+    joints:
+      - follower_left_joint_0
+      - follower_left_joint_1
+      - follower_left_joint_2
+      - follower_left_joint_3
+      - follower_left_joint_4
+      - follower_left_joint_5
+    command_joints:
+      - follower_left_joint_0
+      - follower_left_joint_1
+      - follower_left_joint_2
+      - follower_left_joint_3
+      - follower_left_joint_4
+      - follower_left_joint_5
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+
+    state_publish_rate: 50.0 # Hz
+    action_monitor_rate: 20.0 # Hz
+    allow_partial_joints_goal: false
+    allow_nonzero_velocity_at_trajectory_end: false
+    constraints:
+      stopped_velocity_tolerance: 0.02
+      goal_time: 2.0
+
+/follower_left/gripper_controller:
+  ros__parameters:
+    joint: follower_left_left_carriage_joint
+    allow_stalling: true
+
+# Right arm
+
+/follower_right/controller_manager:
+  ros__parameters:
+    update_rate: 100 # Hz
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    gripper_controller:
+      type: parallel_gripper_action_controller/GripperActionController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+/follower_right/arm_controller:
+  ros__parameters:
+    joints:
+      - follower_right_joint_0
+      - follower_right_joint_1
+      - follower_right_joint_2
+      - follower_right_joint_3
+      - follower_right_joint_4
+      - follower_right_joint_5
+    command_joints:
+      - follower_right_joint_0
+      - follower_right_joint_1
+      - follower_right_joint_2
+      - follower_right_joint_3
+      - follower_right_joint_4
+      - follower_right_joint_5
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+
+    state_publish_rate: 50.0 # Hz
+    action_monitor_rate: 20.0 # Hz
+    allow_partial_joints_goal: false
+    allow_nonzero_velocity_at_trajectory_end: false
+    constraints:
+      stopped_velocity_tolerance: 0.02
+      goal_time: 2.0
+
+/follower_right/gripper_controller:
+  ros__parameters:
+    joint: follower_right_left_carriage_joint
+    allow_stalling: true
