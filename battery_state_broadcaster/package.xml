@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>battery_state_broadcaster</name>
+  <version>4.42.1</version>
+  <description>
+    Humble backport of the ros2_controllers battery state broadcaster (4.42.1):
+    https://github.com/ros-controls/ros2_controllers/tree/aacd842600a09d556b983ac3d53a0983e9ebcbb1/battery_state_broadcaster
+    Publishes the combined sensor_msgs/BatteryState of all configured batteries.
+  </description>
+  <maintainer email="trsupport@trossenrobotics.com">Trossen Robotics</maintainer>
+  <license>Apache License 2.0</license>
+  <url type="repository">https://github.com/ros-controls/ros2_controllers/</url>
+  <author email="yara.shahin@b-robotized.com">Yara Shahin</author>
+  <author email="jonas.otto@ipa.fraunhofer.de">Jonas Otto</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>generate_parameter_library</build_depend>
+
+  <depend>control_msgs</depend>
+  <depend>controller_interface</depend>
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  <depend>rcpputils</depend>
+  <depend>realtime_tools</depend>
+  <depend>sensor_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

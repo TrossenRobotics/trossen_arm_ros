@@ -128,8 +128,8 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             'robot_model',
             default_value='wxai',
-            choices=('wxai'),
-            description='model codename of the Trossen Arm such as `wxai`.'
+            choices=('wxai', 'wxpro'),
+            description='model codename of the Trossen Arm such as `wxai` or `wxpro`.'
         )
     )
     declared_arguments.append(
