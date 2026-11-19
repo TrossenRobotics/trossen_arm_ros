@@ -1,0 +1,62 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 50 # Hz
+    enforce_command_limits: true
+    base_controller:
+      type: trossen_base_controllers/HolonomicController
+
+    lift_controller:
+      type: velocity_controllers/JointGroupVelocityController
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    imu_sensor_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+    battery_state_broadcaster:
+      type: battery_state_broadcaster/BatteryStateBroadcaster
+
+    odometry_broadcaster:
+      type: trossen_base_controllers/OdometryBroadcaster
+
+base_controller:
+  ros__parameters:
+    velocity_x_interface: base/velocity_x
+    velocity_y_interface: base/velocity_y
+    velocity_yaw_interface: base/velocity_yaw
+
+lift_controller:
+  ros__parameters:
+    joints:
+      - lift
+
+imu_sensor_broadcaster:
+  ros__parameters:
+    sensor_name: imu
+    frame_id: imu_link
+
+battery_state_broadcaster:
+  ros__parameters:
+    batteries:
+      - battery
+    interfaces:
+      battery:
+        battery_current: true
+        battery_temperature: true
+        battery_percentage: true
+        battery_power_supply_status: true
+
+odometry_broadcaster:
+  ros__parameters:
+    position_x_interface: base/position_x
+    position_y_interface: base/position_y
+    position_yaw_interface: base/position_yaw
+    velocity_x_interface: base/velocity_x
+    velocity_y_interface: base/velocity_y
+    velocity_yaw_interface: base/velocity_yaw
+    odom_frame_id: odom
+    base_frame_id: base_footprint
+    enable_odom_tf: true  # false if robot_localization publishes odom -> base_footprint
+    pose_covariance_diagonal: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    twist_covariance_diagonal: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>trossen_base_bringup</name>
+  <version>1.0.0</version>
+  <description>Configurations for using Trossen Base hardware with ros2_control</description>
+
+  <maintainer email="trsupport@trossenrobotics.com">Trossen Robotics</maintainer>
+
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>battery_state_broadcaster</depend>
+  <depend>controller_manager</depend>
+  <depend>joint_state_broadcaster</depend>
+  <depend>imu_sensor_broadcaster</depend>
+  <depend>launch_ros</depend>
+  <depend>launch</depend>
+  <depend>trossen_arm_description</depend>
+  <depend>trossen_base_controllers</depend>
+  <depend>trossen_base_hardware</depend>
+  <depend>velocity_controllers</depend>
+
+  <depend>xacro</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
