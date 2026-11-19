@@ -7,6 +7,7 @@ find_package(trossen_base REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 include_directories(
   include
@@ -21,7 +22,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   hardware_interface::hardware_interface
   pluginlib::pluginlib
   rclcpp::rclcpp
-  rclcpp_lifecycle::rclcpp_lifecycle)
+  rclcpp_lifecycle::rclcpp_lifecycle
+  ${sensor_msgs_TARGETS})
 
 pluginlib_export_plugin_description_file(hardware_interface ${PROJECT_NAME}.xml)
 
@@ -52,6 +54,7 @@ ament_export_dependencies(
   hardware_interface
   pluginlib
   rclcpp
-  rclcpp_lifecycle)
+  rclcpp_lifecycle
+  sensor_msgs)
 ament_export_dependencies(trossen_base)
 ament_package()

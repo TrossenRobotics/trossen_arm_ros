@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -39,6 +40,7 @@ namespace trossen_base_hardware
 {
 
 using CallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+using namespace std::chrono_literals;
 
 CallbackReturn
 TrossenBaseHardwareInterface::on_init(const HardwareComponentInterfaceParams& params)
@@ -92,6 +94,13 @@ TrossenBaseHardwareInterface::on_init(const HardwareComponentInterfaceParams& pa
     info_.hardware_parameters.find("mock");
   mock_ = mock_param != info_.hardware_parameters.end() && mock_param->second == "true";
 
+  // Optional lidar point cloud topic
+  std::unordered_map<std::string, std::string>::const_iterator lidar_topic_param =
+    info_.hardware_parameters.find("lidar_topic");
+  if (lidar_topic_param != info_.hardware_parameters.end() && !lidar_topic_param->second.empty()) {
+    lidar_topic_ = lidar_topic_param->second;
+  }
+
   // Lift position limits from the URDF <limit>, used to clamp the mock lift
   lift_min_position_ = -std::numeric_limits<double>::infinity();
   lift_max_position_ = std::numeric_limits<double>::infinity();
@@ -116,21 +125,28 @@ TrossenBaseHardwareInterface::on_configure(const rclcpp_lifecycle::State&)
 {
   if (mock_) {
     RCLCPP_INFO(get_logger(), "Mock mode: not connecting to the Trossen Base.");
-    return CallbackReturn::SUCCESS;
+  } else {
+    RCLCPP_INFO(get_logger(), "Configuring the Trossen Base Driver...");
+
+    base_driver_ = std::make_unique<trossen_base::TrossenBase>();
+    try {
+      base_driver_->configure(true, false);
+    } catch (const std::exception & e) {
+      RCLCPP_FATAL(get_logger(), "Failed to configure TrossenBaseDriver: %s", e.what());
+      return CallbackReturn::ERROR;
+    }
+
+    RCLCPP_INFO(get_logger(), "TrossenBaseDriver configured.");
   }
 
-  RCLCPP_INFO(get_logger(), "Configuring the Trossen Base Driver...");
-
-  base_driver_ = std::make_unique<trossen_base::TrossenBase>();
-
-  try {
-    base_driver_->configure(false, false);
-  } catch (const std::exception & e) {
-    RCLCPP_FATAL(get_logger(), "Failed to configure TrossenBaseDriver: %s", e.what());
-    return CallbackReturn::ERROR;
+  // Start lidar publisher
+  if (get_node())
+  {
+    lidar_publisher_ =
+      get_node()->create_publisher<sensor_msgs::msg::PointCloud2>(lidar_topic_, 10);
+    // Poll lidar at 20hz, but will publish closer to 10hz as lidar driver only updates every 100ms
+    lidar_timer_ = get_node()->create_wall_timer(50ms, [this]() { lidar_timer_callback(); });
   }
-
-  RCLCPP_INFO(get_logger(), "TrossenBaseDriver configured.");
 
   return CallbackReturn::SUCCESS;
 }
@@ -336,6 +352,71 @@ return_type TrossenBaseHardwareInterface::perform_command_mode_switch(
     set_command(name, 0.0);
   }
   return return_type::OK;
+}
+
+void TrossenBaseHardwareInterface::lidar_timer_callback()
+{
+  if (!lidar_publisher_) return;
+
+  const trossen_base::PointCloud cloud =
+    mock_ ? mock_lidar_pointcloud() : base_driver_->get_lidar_pointcloud();
+
+  // Skip if no scan has arrived yet or this scan was already published.
+  if (cloud.timestamp == 0 || cloud.timestamp == last_lidar_timestamp_ms_) {
+    return;
+  }
+  last_lidar_timestamp_ms_ = cloud.timestamp;
+
+  sensor_msgs::msg::PointCloud2 msg;
+
+  // cloud.timestamp is epoch milliseconds at the start of the scan.
+  msg.header.stamp.sec = static_cast<int32_t>(cloud.timestamp / 1000);
+  msg.header.stamp.nanosec = static_cast<uint32_t>((cloud.timestamp % 1000) * 1000000);
+  msg.header.frame_id = "base_link";
+
+  // Per-point fields. "intensity" holds the sensor confidence and "time" is the offset in
+  // seconds from header.stamp
+  sensor_msgs::PointCloud2Modifier modifier(msg);
+  modifier.setPointCloud2Fields(
+    5,
+    "x", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "y", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "z", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "intensity", 1, sensor_msgs::msg::PointField::FLOAT32,
+    "time", 1, sensor_msgs::msg::PointField::FLOAT32);
+  modifier.resize(cloud.points.size());  // Sets height = 1, width, row_step, and data size
+  msg.is_dense = true;  // Driver already drops invalid returns
+
+  sensor_msgs::PointCloud2Iterator<float> iter_x(msg, "x");
+  sensor_msgs::PointCloud2Iterator<float> iter_y(msg, "y");
+  sensor_msgs::PointCloud2Iterator<float> iter_z(msg, "z");
+  sensor_msgs::PointCloud2Iterator<float> iter_intensity(msg, "intensity");
+  sensor_msgs::PointCloud2Iterator<float> iter_time(msg, "time");
+
+  for (size_t i = 0; i < cloud.points.size();
+       ++i, ++iter_x, ++iter_y, ++iter_z, ++iter_intensity, ++iter_time)
+  {
+    const Eigen::Vector3d & p = cloud.points[i];
+    *iter_x = static_cast<float>(p.x());
+    *iter_y = static_cast<float>(p.y());
+    *iter_z = static_cast<float>(p.z());
+    *iter_intensity = static_cast<float>(cloud.confidences[i]);
+    *iter_time = static_cast<float>(cloud.time_offsets[i] / 1000.0);
+  }
+
+  lidar_publisher_->publish(msg);
+}
+
+trossen_base::PointCloud TrossenBaseHardwareInterface::mock_lidar_pointcloud() const
+{
+  // A single return 1 m straight ahead of the base, stamped with slightly old wall-clock ime
+  trossen_base::PointCloud cloud;
+  cloud.timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(
+    (std::chrono::system_clock::now() - 50ms).time_since_epoch()).count();
+  cloud.points.emplace_back(1.0, 0.0, 0.0);
+  cloud.time_offsets.push_back(0.0);
+  cloud.confidences.push_back(255);
+  return cloud;
 }
 
 }  // namespace trossen_base_hardware
